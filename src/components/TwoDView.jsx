@@ -1,298 +1,434 @@
-const SCALE = 80 // pixels per meter (1m = 80px)
-const CORNER_X = 410 // corner point X
-const CORNER_Y = 70  // corner point Y
+import { useState, useRef, useCallback } from 'react'
+import { getWalls, getClosestWallAndOffset, getSnappedOffsetWithLength } from '../utils/geometry'
+
+const SCALE = 70        // pixels per meter
+const WALL_THICK = 10   // px wall thickness
+const SVG_W = 520
+const SVG_H = 520
+const ORIGIN_X = 430    // SVG origin = room corner (right wall meets back wall)
+const ORIGIN_Y = 60     // SVG origin Y
+
+// Convert 3D room coords (x,z) → SVG coords
+// In 3D: x goes negative (back wall), z goes positive (right wall)
+// In SVG: positive x goes right, positive y goes down
+function toSvg(rx, rz) {
+  return {
+    sx: ORIGIN_X + rx * SCALE,   // rx is negative → goes left
+    sy: ORIGIN_Y + rz * SCALE,   // rz is positive → goes down
+  }
+}
+
+// Draw a dimension line in SVG
+function DimLine({ x1, y1, x2, y2, label, offset = 20, vertical = false }) {
+  if (vertical) {
+    const cx = (x1 + x2) / 2 + offset
+    return (
+      <g>
+        <line x1={cx} y1={y1} x2={cx} y2={y2} stroke="#8c887d" strokeWidth="1" />
+        <line x1={cx - 4} y1={y1} x2={cx + 4} y2={y1} stroke="#8c887d" strokeWidth="1.5" />
+        <line x1={cx - 4} y1={y2} x2={cx + 4} y2={y2} stroke="#8c887d" strokeWidth="1.5" />
+        <rect x={cx - 18} y={(y1 + y2) / 2 - 9} width="36" height="18" fill="#fdfdfc" rx="4" />
+        <text x={cx} y={(y1 + y2) / 2} fontSize="10" fontWeight="600" fill="#2c2b29" textAnchor="middle" dominantBaseline="middle">
+          {label}
+        </text>
+      </g>
+    )
+  }
+  const cy = (y1 + y2) / 2 - offset
+  return (
+    <g>
+      <line x1={x1} y1={cy} x2={x2} y2={cy} stroke="#8c887d" strokeWidth="1" />
+      <line x1={x1} y1={cy - 4} x2={x1} y2={cy + 4} stroke="#8c887d" strokeWidth="1.5" />
+      <line x1={x2} y1={cy - 4} x2={x2} y2={cy + 4} stroke="#8c887d" strokeWidth="1.5" />
+      <rect x={(x1 + x2) / 2 - 22} y={cy - 9} width="44" height="18" fill="#fdfdfc" rx="4" />
+      <text x={(x1 + x2) / 2} y={cy} fontSize="10" fontWeight="600" fill="#2c2b29" textAnchor="middle" dominantBaseline="middle">
+        {label}
+      </text>
+    </g>
+  )
+}
+
+// Draw a cabinet rectangle in SVG given wall geometry and offset
+function CabinetRect({ cab, wall, isSelected, onSelect }) {
+  const isWallCab = cab.type.startsWith('wall')
+  const widthPx = cab.width * SCALE
+  const depthPx = (isWallCab ? 0.35 : cab.depth) * SCALE
+
+  // Direction vector of wall in SVG space
+  const dsx = (wall.x2 - wall.x1) / wall.length
+  const dsz = (wall.z2 - wall.z1) / wall.length
+
+  // Center position along wall
+  const cx3 = wall.x1 + dsx * cab.offset
+  const cz3 = wall.z1 + dsz * cab.offset
+  const { sx: cx, sy: cy } = toSvg(cx3, cz3)
+
+  // Half-extents for the rect: along-wall and into-room
+  const halfW = widthPx / 2
+  // Normal direction (inward) in SVG — same sign convention
+  const nx = wall.normalX * SCALE
+  const nz = wall.normalZ * SCALE
+
+  // Four corners: start from wall surface, go inward by depth
+  // Along-wall direction in SVG
+  const ax = dsx * SCALE
+  const az = dsz * SCALE
+
+  // Rect corners (relative to center cx,cy):
+  // c ± halfW * (along-wall) ± depthPx/SCALE * (normal)
+  const corners = [
+    [cx - halfW * dsx - 0, cy - halfW * dsz],      // along-wall start, at wall surface
+    [cx + halfW * dsx,     cy + halfW * dsz],      // along-wall end, at wall surface
+    [cx + halfW * dsx + depthPx * wall.normalX,
+     cy + halfW * dsz + depthPx * wall.normalZ],   // along-wall end, into room
+    [cx - halfW * dsx + depthPx * wall.normalX,
+     cy - halfW * dsz + depthPx * wall.normalZ],   // along-wall start, into room
+  ]
+
+  const pts = corners.map(([x, y]) => `${x},${y}`).join(' ')
+
+  const fill = isSelected
+    ? '#f5ede0'
+    : isWallCab
+    ? 'none'
+    : cab.type === 'tall' ? '#eae6dc' : '#f5f4f0'
+
+  const stroke = isSelected ? '#826242' : isWallCab ? '#8c887d' : '#2c2b29'
+
+  // Label position: center of the polygon
+  const lx = corners.reduce((s, c) => s + c[0], 0) / 4
+  const ly = corners.reduce((s, c) => s + c[1], 0) / 4
+
+  // Angle for rotated text along wall
+  const angle = Math.atan2(dsz, dsx) * 180 / Math.PI
+
+  return (
+    <g onClick={() => onSelect(cab.id)} style={{ cursor: 'pointer' }}>
+      <polygon
+        points={pts}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={isSelected ? 2.5 : 1.5}
+        strokeDasharray={isWallCab ? '4,3' : 'none'}
+        rx="2"
+      />
+      <text
+        x={lx} y={ly}
+        fontSize="8"
+        fontWeight="700"
+        fill={stroke}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        transform={`rotate(${angle}, ${lx}, ${ly})`}
+      >
+        {cab.code}
+      </text>
+    </g>
+  )
+}
+
+// Draw a door symbol in SVG
+function DoorSymbol({ opening, wall }) {
+  const dsx = (wall.x2 - wall.x1) / wall.length
+  const dsz = (wall.z2 - wall.z1) / wall.length
+  const widthPx = opening.width * SCALE
+
+  const startX3 = wall.x1 + dsx * opening.offset
+  const startZ3 = wall.z1 + dsz * opening.offset
+  const endX3 = startX3 + dsx * opening.width
+  const endZ3 = startZ3 + dsz * opening.width
+
+  const { sx: x1, sy: y1 } = toSvg(startX3, startZ3)
+  const { sx: x2, sy: y2 } = toSvg(endX3, endZ3)
+
+  const arcR = widthPx
+  const sweepAngle = 90
+  // Door swings into room (normal direction)
+  const nx = wall.normalX
+  const nz = wall.normalZ
+  const endArcX = x1 + nx * widthPx
+  const endArcY = y1 + nz * widthPx
+
+  return (
+    <g>
+      {/* Opening gap */}
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fdfdfc" strokeWidth="10" />
+      {/* Door leaf */}
+      <line x1={x1} y1={y1} x2={endArcX} y2={endArcY} stroke="#826242" strokeWidth="1.5" />
+      {/* Swing arc */}
+      <path
+        d={`M ${x2} ${y2} A ${arcR} ${arcR} 0 0 ${nx < 0 || nz > 0 ? 0 : 1} ${endArcX} ${endArcY}`}
+        fill="none"
+        stroke="#826242"
+        strokeWidth="1"
+        strokeDasharray="3,2"
+      />
+    </g>
+  )
+}
+
+// Draw a window symbol in SVG
+function WindowSymbol({ opening, wall }) {
+  const dsx = (wall.x2 - wall.x1) / wall.length
+  const dsz = (wall.z2 - wall.z1) / wall.length
+  const widthPx = opening.width * SCALE
+  const halfDepthPx = 5
+
+  const startX3 = wall.x1 + dsx * opening.offset
+  const startZ3 = wall.z1 + dsz * opening.offset
+  const endX3 = startX3 + dsx * opening.width
+  const endZ3 = startZ3 + dsz * opening.width
+
+  const { sx: x1, sy: y1 } = toSvg(startX3, startZ3)
+  const { sx: x2, sy: y2 } = toSvg(endX3, endZ3)
+
+  const nx = wall.normalX * halfDepthPx
+  const nz = wall.normalZ * halfDepthPx
+
+  return (
+    <g>
+      {/* Opening gap in wall */}
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fdfdfc" strokeWidth="10" />
+      {/* Glass lines (double) */}
+      <line x1={x1 + nx * 0.4} y1={y1 + nz * 0.4} x2={x2 + nx * 0.4} y2={y2 + nz * 0.4}
+        stroke="#7db8d4" strokeWidth="2" />
+      <line x1={x1 + nx * 1.0} y1={y1 + nz * 1.0} x2={x2 + nx * 1.0} y2={y2 + nz * 1.0}
+        stroke="#7db8d4" strokeWidth="2" />
+    </g>
+  )
+}
+
+// Ghost cabinet preview during placement
+function GhostCabinet({ cab, wall, offset }) {
+  if (!wall) return null
+  const ghost = { ...cab, offset, wall: wall.id }
+  return (
+    <g opacity="0.55" pointerEvents="none">
+      <CabinetRect
+        cab={ghost}
+        wall={wall}
+        isSelected={false}
+        onSelect={() => {}}
+      />
+    </g>
+  )
+}
 
 export default function TwoDView({
   cabinets,
+  openings,
   selectedCabinetId,
   onSelectCabinet,
-  wallDimensions = { back: 4.0, right: 4.74 } // in meters
+  wallDimensions,
+  roomShape,
+  placingCabinet,
+  onConfirmPlacement,
+  onUpdateCabinetPos,
+  onUpdateHoverPos,
 }) {
-  // Conversie van meters naar pixels
-  const backWallLengthPx = wallDimensions.back * SCALE
-  const rightWallLengthPx = wallDimensions.right * SCALE
+  const svgRef = useRef(null)
+  const [draggingId, setDraggingId] = useState(null)
+  const [hoverWall, setHoverWall]   = useState(null)
+  const [hoverOffset, setHoverOffset] = useState(0)
+  const [snapActive, setSnapActive] = useState(false)
 
-  // Hulpmiddel om SVG coördinaten te berekenen op basis van wand-relatieve posities
-  const renderCabinets = () => {
-    return cabinets.map((cab) => {
-      const isSelected = cab.id === selectedCabinetId
-      const widthPx = cab.width * SCALE
-      const depthPx = cab.depth * SCALE
+  const walls = getWalls(roomShape, wallDimensions)
 
-      // Bepaal of de kast tegen de rechterwand (vertical) of de achterwand (horizontal) staat
-      if (cab.wall === 'right') {
-        // Positie langs de rechterwand (Z-as in 3D -> Y-as in SVG)
-        // cab.position[2] is het middelpunt op de Z-as in 3D
-        const centerY = CORNER_Y + cab.position[2] * SCALE
-        const rectX = CORNER_X - depthPx
-        const rectY = centerY - widthPx / 2
+  // Convert SVG mouse position to 3D room coordinates
+  const svgToRoom = useCallback((svgX, svgY) => {
+    return {
+      rx: (svgX - ORIGIN_X) / SCALE,  // negative = along back wall
+      rz: (svgY - ORIGIN_Y) / SCALE,  // positive = along right wall
+    }
+  }, [])
 
-        if (cab.type.startsWith('wall')) {
-          // Bovenkasten: gestreepte rechthoek, hangt "boven" de onderkasten (dus smaller en dichter bij de muur)
-          const wallDepthPx = 0.35 * SCALE // Bovenkast is minder diep
-          return (
-            <g 
-              key={cab.id} 
-              onClick={() => onSelectCabinet(cab.id)}
-              style={{ cursor: 'pointer' }}
-            >
-              <rect
-                x={CORNER_X - wallDepthPx}
-                y={rectY}
-                width={wallDepthPx}
-                height={widthPx}
-                fill="none"
-                stroke={isSelected ? '#826242' : '#8c887d'}
-                strokeWidth={isSelected ? 2 : 1.5}
-                strokeDasharray="4,4"
-              />
-              {/* Text label voor bovenkast */}
-              <text
-                x={CORNER_X - wallDepthPx / 2}
-                y={centerY}
-                fontSize="8px"
-                fontWeight="bold"
-                fill={isSelected ? '#826242' : '#8c887d'}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                transform={`rotate(-90, ${CORNER_X - wallDepthPx / 2}, ${centerY})`}
-              >
-                {cab.code}
-              </text>
-            </g>
-          )
-        } else {
-          // Onderkasten & Hoge kasten: massief gevulde rechthoek
-          const isTall = cab.type === 'tall'
-          return (
-            <g 
-              key={cab.id} 
-              onClick={() => onSelectCabinet(cab.id)}
-              style={{ cursor: 'pointer' }}
-            >
-              <rect
-                x={rectX}
-                y={rectY}
-                width={depthPx}
-                height={widthPx}
-                fill={isSelected ? '#f5ede0' : (isTall ? '#eae6dc' : '#f5f4f0')}
-                stroke={isSelected ? '#826242' : '#2c2b29'}
-                strokeWidth={isSelected ? 2.5 : 1.5}
-                rx={2}
-              />
-              {/* Kastcode (bijv UA60) */}
-              <text
-                x={rectX + depthPx / 2}
-                y={centerY - 4}
-                fontSize="9px"
-                fontWeight="bold"
-                fill={isSelected ? '#826242' : '#2c2b29'}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                transform={`rotate(-90, ${rectX + depthPx / 2}, ${centerY - 4})`}
-              >
-                {cab.code}
-              </text>
-              {/* Kastbreedte in cm */}
-              <text
-                x={rectX + depthPx / 2}
-                y={centerY + 8}
-                fontSize="8px"
-                fill="#8c887d"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                transform={`rotate(-90, ${rectX + depthPx / 2}, ${centerY + 8})`}
-              >
-                {Math.round(cab.width * 100)}
-              </text>
-            </g>
-          )
-        }
-      } else {
-        // Positie langs de achterwand (X-as in 3D -> X-as in SVG, loopt naar links dus negatieve X)
-        const centerX = CORNER_X + cab.position[0] * SCALE
-        const rectX = centerX - widthPx / 2
-        const rectY = CORNER_Y
+  const handleMouseMove = useCallback((e) => {
+    if (!svgRef.current) return
+    const rect = svgRef.current.getBoundingClientRect()
+    const svgX = (e.clientX - rect.left) * (SVG_W / rect.width)
+    const svgY = (e.clientY - rect.top)  * (SVG_H / rect.height)
+    const { rx, rz } = svgToRoom(svgX, svgY)
 
-        if (cab.type.startsWith('wall')) {
-          const wallDepthPx = 0.35 * SCALE
-          return (
-            <g 
-              key={cab.id} 
-              onClick={() => onSelectCabinet(cab.id)}
-              style={{ cursor: 'pointer' }}
-            >
-              <rect
-                x={rectX}
-                y={CORNER_Y}
-                width={widthPx}
-                height={wallDepthPx}
-                fill="none"
-                stroke={isSelected ? '#826242' : '#8c887d'}
-                strokeWidth={isSelected ? 2 : 1.5}
-                strokeDasharray="4,4"
-              />
-              <text
-                x={centerX}
-                y={CORNER_Y + wallDepthPx / 2}
-                fontSize="8px"
-                fontWeight="bold"
-                fill={isSelected ? '#826242' : '#8c887d'}
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >
-                {cab.code}
-              </text>
-            </g>
-          )
-        } else {
-          const isTall = cab.type === 'tall'
-          return (
-            <g 
-              key={cab.id} 
-              onClick={() => onSelectCabinet(cab.id)}
-              style={{ cursor: 'pointer' }}
-            >
-              <rect
-                x={rectX}
-                y={rectY}
-                width={widthPx}
-                height={depthPx}
-                fill={isSelected ? '#f5ede0' : (isTall ? '#eae6dc' : '#f5f4f0')}
-                stroke={isSelected ? '#826242' : '#2c2b29'}
-                strokeWidth={isSelected ? 2.5 : 1.5}
-                rx={2}
-              />
-              <text
-                x={centerX}
-                y={rectY + depthPx / 2 - 6}
-                fontSize="9px"
-                fontWeight="bold"
-                fill={isSelected ? '#826242' : '#2c2b29'}
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >
-                {cab.code}
-              </text>
-              <text
-                x={centerX}
-                y={rectY + depthPx / 2 + 6}
-                fontSize="8px"
-                fill="#8c887d"
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >
-                {Math.round(cab.width * 100)}
-              </text>
-            </g>
-          )
-        }
-      }
-    });
+    const { wall, offset } = getClosestWallAndOffset(rx, rz, walls)
+    if (!wall) return
+
+    const cabWidth = placingCabinet?.width ?? (draggingId ? cabinets.find(c => c.id === draggingId)?.width ?? 0.6 : 0.6)
+
+    const snapped = getSnappedOffsetWithLength(
+      offset, wall.id, wall.length, cabinets, openings, cabWidth,
+      draggingId ?? undefined
+    )
+
+    const isSnapping = Math.abs(snapped - offset) > 0.01
+    setSnapActive(isSnapping)
+    setHoverWall(wall)
+    setHoverOffset(snapped)
+    if (onUpdateHoverPos) onUpdateHoverPos(wall.id, snapped)
+
+    if (draggingId) {
+      onUpdateCabinetPos(draggingId, wall.id, snapped)
+    }
+  }, [walls, placingCabinet, draggingId, cabinets, openings, svgToRoom, onUpdateCabinetPos, onUpdateHoverPos])
+
+  const handleMouseLeave = useCallback(() => {
+    setHoverWall(null)
+    setHoverOffset(0)
+    setSnapActive(false)
+    if (onUpdateHoverPos) onUpdateHoverPos(null, 0)
+  }, [onUpdateHoverPos])
+
+  const handleClick = useCallback(() => {
+    if (placingCabinet && hoverWall) {
+      onConfirmPlacement(hoverWall.id, hoverOffset)
+    }
+  }, [placingCabinet, hoverWall, hoverOffset, onConfirmPlacement])
+
+  const handleMouseDown = useCallback((cabId, e) => {
+    e.stopPropagation()
+    if (!placingCabinet) {
+      setDraggingId(cabId)
+      onSelectCabinet(cabId)
+    }
+  }, [placingCabinet, onSelectCabinet])
+
+  const handleMouseUp = useCallback(() => {
+    setDraggingId(null)
+  }, [])
+
+  // Build wall SVG paths
+  const renderWalls = () => {
+    return walls.map(wall => {
+      const { sx: sx1, sy: sy1 } = toSvg(wall.x1, wall.z1)
+      const { sx: sx2, sy: sy2 } = toSvg(wall.x2, wall.z2)
+      // Offset the rect by WALL_THICK/2 in the outward-normal direction
+      const outNx = -wall.normalX
+      const outNz = -wall.normalZ
+
+      // Build a thick wall polygon
+      const perpX = outNx * WALL_THICK
+      const perpY = outNz * WALL_THICK
+
+      const corners = [
+        [sx1, sy1],
+        [sx2, sy2],
+        [sx2 + perpX, sy2 + perpY],
+        [sx1 + perpX, sy1 + perpY],
+      ]
+      return (
+        <polygon
+          key={wall.id}
+          points={corners.map(([x, y]) => `${x},${y}`).join(' ')}
+          fill="#e5e2db"
+          stroke="#2c2b29"
+          strokeWidth="1.5"
+        />
+      )
+    })
   }
+
+  // Dimension lines
+  const renderDimensions = () => {
+    return walls.map(wall => {
+      const { sx: sx1, sy: sy1 } = toSvg(wall.x1, wall.z1)
+      const { sx: sx2, sy: sy2 } = toSvg(wall.x2, wall.z2)
+      const label = `${Math.round(wall.length * 100)} cm`
+      const isVert = Math.abs(sx1 - sx2) < 2
+      if (isVert) {
+        return <DimLine key={wall.id} x1={sx1} y1={Math.min(sy1,sy2)} x2={sx2} y2={Math.max(sy1,sy2)}
+          label={label} offset={30} vertical />
+      }
+      return <DimLine key={wall.id} x1={Math.min(sx1,sx2)} y1={sy1} x2={Math.max(sx1,sx2)} y2={sy2}
+        label={label} offset={22} />
+    })
+  }
+
+  // Cursor style
+  const cursor = placingCabinet ? 'crosshair' : draggingId ? 'grabbing' : 'default'
 
   return (
     <div className="flatplan-container">
-      <div className="flatplan-header">
-        Plattegrond (2D Weergave)
+      <div className="flatplan-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Plattegrond (2D)</span>
+        {snapActive && hoverWall && (
+          <span style={{ fontSize: '11px', color: '#826242', fontWeight: '700', background: '#f7f3ec', padding: '2px 8px', borderRadius: '10px' }}>
+            ◎ SNAP
+          </span>
+        )}
       </div>
       <div className="flatplan-svg-wrapper">
-        <svg 
-          viewBox="0 0 500 500" 
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           className="flatplan-svg"
+          style={{ cursor }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
+          onMouseUp={handleMouseUp}
         >
-          {/* Grid achtergrond voor technisch gevoel */}
+          {/* Grid */}
           <defs>
-            <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
-              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#f1efe9" strokeWidth="1" />
+            <pattern id="gridP" width="14" height="14" patternUnits="userSpaceOnUse">
+              <path d="M 14 0 L 0 0 0 14" fill="none" stroke="#f1efe9" strokeWidth="1" />
             </pattern>
           </defs>
-          <rect width="100%" height="100%" fill="url(#gridPattern)" />
+          <rect width="100%" height="100%" fill="url(#gridP)" />
 
-          {/* L-Wanden (Muren) */}
-          {/* Achterwand */}
-          <rect
-            x={CORNER_X - backWallLengthPx}
-            y={CORNER_Y - 12}
-            width={backWallLengthPx + 12}
-            height={12}
-            fill="#e5e2db"
-            stroke="#2c2b29"
-            strokeWidth="1.5"
-          />
-          {/* Rechterwand */}
-          <rect
-            x={CORNER_X}
-            y={CORNER_Y - 12}
-            width={12}
-            height={rightWallLengthPx + 12}
-            fill="#e5e2db"
-            stroke="#2c2b29"
-            strokeWidth="1.5"
-          />
+          {/* Snap crosshair on hovered wall position */}
+          {hoverWall && (placingCabinet || draggingId) && (() => {
+            const dsx = (hoverWall.x2 - hoverWall.x1) / hoverWall.length
+            const dsz = (hoverWall.z2 - hoverWall.z1) / hoverWall.length
+            const cx3 = hoverWall.x1 + dsx * hoverOffset
+            const cz3 = hoverWall.z1 + dsz * hoverOffset
+            const { sx, sy } = toSvg(cx3, cz3)
+            return (
+              <g>
+                <line x1={sx - 8} y1={sy} x2={sx + 8} y2={sy} stroke={snapActive ? '#826242' : '#a39f96'} strokeWidth="1.5" />
+                <line x1={sx} y1={sy - 8} x2={sx} y2={sy + 8} stroke={snapActive ? '#826242' : '#a39f96'} strokeWidth="1.5" />
+                <circle cx={sx} cy={sy} r={snapActive ? 5 : 3} fill="none" stroke={snapActive ? '#826242' : '#a39f96'} strokeWidth="1.5" />
+              </g>
+            )
+          })()}
 
-          {/* Kasten renderen */}
-          {renderCabinets()}
+          {/* Walls */}
+          {renderWalls()}
 
-          {/* Maatvoeringslijnen */}
-          {/* Achterwand Maatvoering (400 cm) */}
-          <g>
-            {/* Lijn */}
-            <line 
-              x1={CORNER_X - backWallLengthPx} 
-              y1={CORNER_Y - 28} 
-              x2={CORNER_X} 
-              y2={CORNER_Y - 28} 
-              stroke="#8c887d" 
-              strokeWidth="1" 
+          {/* Openings: windows & doors on top of walls */}
+          {openings.map(o => {
+            const wall = walls.find(w => w.id === o.wall)
+            if (!wall) return null
+            return o.type === 'door'
+              ? <DoorSymbol key={o.id} opening={o} wall={wall} />
+              : <WindowSymbol key={o.id} opening={o} wall={wall} />
+          })}
+
+          {/* Cabinets */}
+          {cabinets.map(cab => {
+            const wall = walls.find(w => w.id === cab.wall)
+            if (!wall) return null
+            return (
+              <g key={cab.id} onMouseDown={e => handleMouseDown(cab.id, e)}>
+                <CabinetRect
+                  cab={cab}
+                  wall={wall}
+                  isSelected={selectedCabinetId === cab.id}
+                  onSelect={onSelectCabinet}
+                />
+              </g>
+            )
+          })}
+
+          {/* Ghost preview for placement */}
+          {placingCabinet && hoverWall && (
+            <GhostCabinet
+              cab={placingCabinet}
+              wall={hoverWall}
+              offset={hoverOffset}
             />
-            {/* Ticks */}
-            <line x1={CORNER_X - backWallLengthPx} y1={CORNER_Y - 33} x2={CORNER_X - backWallLengthPx} y2={CORNER_Y - 23} stroke="#8c887d" strokeWidth="1.5" />
-            <line x1={CORNER_X} y1={CORNER_Y - 33} x2={CORNER_X} y2={CORNER_Y - 23} stroke="#8c887d" strokeWidth="1.5" />
-            {/* Tekst */}
-            <rect x={CORNER_X - backWallLengthPx / 2 - 25} y={CORNER_Y - 38} width="50" height="18" fill="#fdfdfc" rx="4" />
-            <text 
-              x={CORNER_X - backWallLengthPx / 2} 
-              y={CORNER_Y - 28} 
-              fontSize="11px" 
-              fontWeight="600"
-              fill="#2c2b29" 
-              textAnchor="middle" 
-              dominantBaseline="middle"
-            >
-              {Math.round(wallDimensions.back * 100)} cm
-            </text>
-          </g>
+          )}
 
-          {/* Rechterwand Maatvoering (474 cm) */}
-          <g>
-            {/* Lijn */}
-            <line 
-              x1={CORNER_X + 28} 
-              y1={CORNER_Y} 
-              x2={CORNER_X + 28} 
-              y2={CORNER_Y + rightWallLengthPx} 
-              stroke="#8c887d" 
-              strokeWidth="1" 
-            />
-            {/* Ticks */}
-            <line x1={CORNER_X + 23} y1={CORNER_Y} x2={CORNER_X + 33} y2={CORNER_Y} stroke="#8c887d" strokeWidth="1.5" />
-            <line x1={CORNER_X + 23} y1={CORNER_Y + rightWallLengthPx} x2={CORNER_X + 33} y2={CORNER_Y + rightWallLengthPx} stroke="#8c887d" strokeWidth="1.5" />
-            {/* Tekst */}
-            <rect x={CORNER_X + 18} y={CORNER_Y + rightWallLengthPx / 2 - 25} width="20" height="50" fill="#fdfdfc" rx="4" />
-            <text 
-              x={CORNER_X + 28} 
-              y={CORNER_Y + rightWallLengthPx / 2} 
-              fontSize="11px" 
-              fontWeight="600"
-              fill="#2c2b29" 
-              textAnchor="middle" 
-              dominantBaseline="middle"
-              transform={`rotate(90, ${CORNER_X + 28}, ${CORNER_Y + rightWallLengthPx / 2})`}
-            >
-              {Math.round(wallDimensions.right * 100)} cm
-            </text>
-          </g>
+          {/* Dimension lines */}
+          {renderDimensions()}
         </svg>
       </div>
     </div>
