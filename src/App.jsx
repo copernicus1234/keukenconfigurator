@@ -158,18 +158,17 @@ export default function App() {
       {/* Main split-screen: 3D View links en 2D Plattegrond rechts */}
       <main className="main-content">
         {/* 3D Scene */}
-        <ThreeDView 
-          cabinets={cabinetsWithTransforms}
-          openings={openings}
-          selectedCabinetId={selectedCabinetId}
-          onSelectCabinet={setSelectedCabinetId}
-          selectedMaterial={selectedMaterial}
-          wallDimensions={wallLengths}
-          roomShape={roomShape}
-          placingCabinet={placingCabinet}
-          hoveredWallId={hoveredWallId}
-          hoveredOffset={hoveredOffset}
-        />
+         <ThreeDView 
+           cabinets={cabinetsWithTransforms}
+           openings={openings}
+           selectedCabinetId={selectedCabinetId}
+           onSelectCabinet={setSelectedCabinetId}
+           selectedMaterial={selectedMaterial}
+           wallDimensions={wallLengths}
+           roomShape={roomShape}
+           hoveredWallId={hoveredWallId}
+           hoveredOffset={hoveredOffset}
+         />
 
         {/* 2D Plattegrond */}
         <TwoDView 

@@ -253,6 +253,39 @@ export default function Sidebar({
                             style={{ width: '60px', padding: '4px', border: '1px solid #e5e2db', borderRadius: '4px', fontSize: '12px' }}
                           />
                         </label>
+                        {o.type === 'door' && (
+                          <label style={{ fontSize: '10px', color: '#8c887d', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            Hoogte (cm)
+                            <input
+                              type="number" min="100" max="250" step="5"
+                              value={Math.round(o.height * 100)}
+                              onChange={e => onUpdateOpening(o.id, 'height', parseInt(e.target.value) / 100)}
+                              style={{ width: '60px', padding: '4px', border: '1px solid #e5e2db', borderRadius: '4px', fontSize: '12px' }}
+                            />
+                          </label>
+                        )}
+                        {o.type === 'window' && (
+                          <>
+                            <label style={{ fontSize: '10px', color: '#8c887d', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              Hraam (cm)
+                              <input
+                                type="number" min="40" max="200" step="5"
+                                value={Math.round(o.height * 100)}
+                                onChange={e => onUpdateOpening(o.id, 'height', parseInt(e.target.value) / 100)}
+                                style={{ width: '60px', padding: '4px', border: '1px solid #e5e2db', borderRadius: '4px', fontSize: '12px' }}
+                              />
+                            </label>
+                            <label style={{ fontSize: '10px', color: '#8c887d', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              Zraam (cm)
+                              <input
+                                type="number" min="20" max="200" step="5"
+                                value={Math.round((o.sillHeight || 0.9) * 100)}
+                                onChange={e => onUpdateOpening(o.id, 'sillHeight', parseInt(e.target.value) / 100)}
+                                style={{ width: '60px', padding: '4px', border: '1px solid #e5e2db', borderRadius: '4px', fontSize: '12px' }}
+                              />
+                            </label>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}

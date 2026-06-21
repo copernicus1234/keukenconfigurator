@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Grid, ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
+import { getWalls } from '../utils/geometry'
 
 // Helper om ter plekke een eikenhout PBR-achtige textuur te genereren
 function createWoodTexture(baseColorHex, grainColorHex) {
@@ -360,7 +361,9 @@ export default function ThreeDView({
   selectedCabinetId,
   onSelectCabinet,
   selectedMaterial,
-  wallDimensions = { back: 4.0, right: 4.74 }
+  wallDimensions = { back: 4.0, right: 4.74 },
+  roomShape = 'L-shape',
+  openings = []
 }) {
   // PBR-achtige materialen maken op basis van de geselecteerde houtkleur
   const materials = useMemo(() => {
@@ -393,56 +396,130 @@ export default function ThreeDView({
     return { woodMaterial, stoneMaterial, metalMaterial }
   }, [selectedMaterial])
 
-  // Genereer het doorlopende werkblad (continuous worktop) voor onderkasten
+  const walls = useMemo(() => getWalls(roomShape, wallDimensions), [roomShape, wallDimensions])
+
+  // Genereer het doorlopende werkblad (continuous worktop) voor onderkasten per wand
   const renderContinuousElements = () => {
-    const baseCabinetsRight = cabinets.filter(
-      c => c.wall === 'right' && c.type.startsWith('base')
-    )
+    const baseWalls = ['back', 'right', 'left']
+    const elements = []
 
-    if (baseCabinetsRight.length === 0) return null
+    baseWalls.forEach(wallId => {
+      const baseCabinets = cabinets.filter(
+        c => c.wall === wallId && c.type.startsWith('base')
+      )
+      if (baseCabinets.length === 0) return
 
-    // Sorteer de kasten langs de rechterwand op basis van hun Z positie (loopt van 0 tot 4.74)
-    baseCabinetsRight.sort((a, b) => a.position[2] - b.position[2])
+      const wall = walls.find(w => w.id === wallId)
+      if (!wall) return
 
-    // Vind de start en het einde van de onderkasten langs de Z-as
-    const firstCab = baseCabinetsRight[0]
-    const lastCab = baseCabinetsRight[baseCabinetsRight.length - 1]
-    
-    const startZ = firstCab.position[2] - firstCab.width / 2
-    const endZ = lastCab.position[2] + lastCab.width / 2
-    const totalLength = endZ - startZ
+      baseCabinets.sort((a, b) => a.offset - b.offset)
 
-    const worktopThickness = 0.04
-    const worktopDepth = 0.61 // Iets breder dan de kasten (overstek)
-    const plinthHeight = 0.1
+      const startOffset = baseCabinets[0].offset
+      const endOffset = baseCabinets[baseCabinets.length - 1].offset
 
-    // Middelpunt van het werkblad op de Z-as
-    const centerZ = startZ + totalLength / 2
+      const sx3 = wall.x1 + ((wall.x2 - wall.x1) / wall.length) * startOffset
+      const sw3 = wall.z1 + ((wall.z2 - wall.z1) / wall.length) * startOffset
+      const ex3 = wall.x1 + ((wall.x2 - wall.x1) / wall.length) * endOffset
+      const ew3 = wall.z1 + ((wall.z2 - wall.z1) / wall.length) * endOffset
 
-    return (
-      <group>
-        {/* Doorlopend Werkblad (Right Wall) */}
-        <mesh 
-          position={[-worktopDepth / 2 + 0.005, 0.8 + worktopThickness / 2, centerZ]} 
-          castShadow 
-          receiveShadow
-        >
-          {/* breedte=werkblad overstek, hoogte=dikte, diepte=totale lengte */}
-          <boxGeometry args={[worktopDepth, worktopThickness, totalLength]} />
-          <primitive object={materials.stoneMaterial} attach="material" />
-        </mesh>
+      const centerX3 = (sx3 + ex3) / 2
+      const centerW3 = (sw3 + ew3) / 2
+      const totalLen = Math.sqrt((ex3 - sx3) ** 2 + (ew3 - sw3) ** 2)
 
-        {/* Doorlopende Plint (Right Wall) */}
-        <mesh 
-          position={[-0.05, plinthHeight / 2, centerZ]} 
-          castShadow 
-          receiveShadow
-        >
-          <boxGeometry args={[0.02, plinthHeight, totalLength]} />
-          <meshStandardMaterial color="#2c2b29" roughness={0.9} />
-        </mesh>
-      </group>
-    )
+      const dx = (ex3 - sx3) / totalLen
+      const dz = (ew3 - sw3) / totalLen
+
+      const worktopThickness = 0.04
+      const worktopDepth = 0.61
+      const plinthHeight = 0.1
+
+      const nx = wall.normalX
+      const nz = wall.normalZ
+      const y = 0.8 + worktopThickness / 2
+      const py = plinthHeight / 2
+
+      elements.push(
+        <group key={`wt-${wallId}`}>
+          <mesh position={[centerX3 + nx * (worktopDepth / 2 - 0.005), y, centerW3 + nz * (worktopDepth / 2 - 0.005)]} castShadow receiveShadow>
+            <boxGeometry args={[worktopDepth, worktopThickness, totalLen]} />
+            <primitive object={materials.stoneMaterial} attach="material" />
+          </mesh>
+          <mesh position={[centerX3 + nx * 0.01, py, centerW3 + nz * 0.01]} castShadow receiveShadow>
+            <boxGeometry args={[0.02, plinthHeight, totalLen]} />
+            <meshStandardMaterial color="#2c2b29" roughness={0.9} />
+          </mesh>
+        </group>
+      )
+    })
+
+    return elements.length > 0 ? <group>{elements}</group> : null
+  }
+
+  const renderOpenings3D = () => {
+    if (!openings || openings.length === 0) return null
+
+    const wallMap = {}
+    walls.forEach(w => wallMap[w.id] = w)
+
+    return openings.map(opening => {
+      const wall = wallMap[opening.wall]
+      if (!wall) return null
+
+      const dsx = (wall.x2 - wall.x1) / wall.length
+      const dsz = (wall.z2 - wall.z1) / wall.length
+
+      const centerOff = opening.offset + opening.width / 2
+      const x = wall.x1 + dsx * centerOff
+      const z = wall.z1 + dsz * centerOff
+
+      if (opening.type === 'door') {
+        const doorH = opening.height
+        const doorW = opening.width
+
+        return (
+          <group key={opening.id} position={[x, 0, z]} rotation={[0, wall.angle, 0]}>
+            <mesh position={[0, doorH / 2, 0.06]} castShadow receiveShadow>
+              <boxGeometry args={[doorW - 0.04, doorH - 0.04, 0.04]} />
+              <meshStandardMaterial color="#d4c8b8" roughness={0.5} metalness={0.05} />
+            </mesh>
+            <mesh position={[0, doorH / 2, -0.01]}>
+              <boxGeometry args={[doorW - 0.08, doorH - 0.08, 0.01]} />
+              <meshStandardMaterial color="#e8ddd0" roughness={0.4} metalness={0.05} />
+            </mesh>
+            <mesh position={[doorW / 2 - 0.08, doorH * 0.45, 0.04]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.01, 0.01, 0.12, 8]} />
+              <meshStandardMaterial color="#c0c0c0" roughness={0.2} metalness={0.9} />
+            </mesh>
+          </group>
+        )
+      }
+
+      if (opening.type === 'window') {
+        const winH = opening.height
+        const winW = opening.width
+        const sillY = opening.sillHeight || 0.9
+        const winCY = sillY + winH / 2
+
+        return (
+          <group key={opening.id} position={[x, winCY, z]} rotation={[0, wall.angle, 0]}>
+            <mesh position={[0, 0, 0.04]}>
+              <boxGeometry args={[winW + 0.06, winH + 0.06, 0.04]} />
+              <meshStandardMaterial color="#d4c8b8" roughness={0.5} metalness={0.05} />
+            </mesh>
+            <mesh position={[0, 0, -0.01]}>
+              <boxGeometry args={[winW - 0.02, winH - 0.02, 0.005]} />
+              <meshStandardMaterial color="#a8d0e8" roughness={0.1} metalness={0.1} transparent opacity={0.5} />
+            </mesh>
+            <mesh position={[0, -winH / 2 - 0.015, 0.03]}>
+              <boxGeometry args={[winW + 0.1, 0.03, 0.1]} />
+              <meshStandardMaterial color="#d4c8b8" roughness={0.5} metalness={0.05} />
+            </mesh>
+          </group>
+        )
+      }
+
+      return null
+    })
   }
 
   return (
@@ -492,18 +569,17 @@ export default function ThreeDView({
           color="#fff6e0"
         />
 
-        {/* L-Wanden (Muren) */}
-        {/* Achterwand (X-as) */}
-        <mesh position={[-wallDimensions.back / 2, 1.25, -0.05]} receiveShadow>
-          <boxGeometry args={[wallDimensions.back, 2.5, 0.1]} />
-          <meshStandardMaterial color="#dfdbd0" roughness={0.95} />
-        </mesh>
-
-        {/* Rechterwand (Z-as) */}
-        <mesh position={[0.05, 1.25, wallDimensions.right / 2]} receiveShadow>
-          <boxGeometry args={[0.1, 2.5, wallDimensions.right]} />
-          <meshStandardMaterial color="#dfdbd0" roughness={0.95} />
-        </mesh>
+        {/* Dynamische muren op basis van roomShape */}
+        {walls.map(wall => {
+          const cx3 = (wall.x1 + wall.x2) / 2
+          const cz3 = (wall.z1 + wall.z2) / 2
+          return (
+            <mesh key={wall.id} position={[cx3, 1.25, cz3]} rotation={[0, wall.angle, 0]} receiveShadow>
+              <boxGeometry args={[wall.length, 2.5, 0.1]} />
+              <meshStandardMaterial color="#dfdbd0" roughness={0.95} />
+            </mesh>
+          )
+        })}
 
         {/* Vloer (Grijze plavuizen) */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-wallDimensions.back / 2, 0, wallDimensions.right / 2]} receiveShadow>
@@ -538,6 +614,9 @@ export default function ThreeDView({
 
         {/* Doorlopende bladen en plinten */}
         {renderContinuousElements()}
+
+        {/* Ramen en deuren */}
+        {renderOpenings3D()}
 
         {/* Zachte contactschaduwen op de vloer */}
         <ContactShadows 
