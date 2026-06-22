@@ -478,7 +478,7 @@ export default function ThreeDView({
 
         return (
           <group key={opening.id} position={[x, 0, z]} rotation={[0, wall.angle, 0]}>
-            <mesh position={[0, doorH / 2, 0.06]} castShadow receiveShadow>
+            <mesh position={[0, doorH / 2, 0.06]} receiveShadow>
               <boxGeometry args={[doorW - 0.04, doorH - 0.04, 0.04]} />
               <meshStandardMaterial color="#d4c8b8" roughness={0.5} metalness={0.05} />
             </mesh>

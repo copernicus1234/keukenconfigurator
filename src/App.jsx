@@ -4,19 +4,6 @@ import ThreeDView from './components/ThreeDView'
 import TwoDView from './components/TwoDView'
 import { getWalls, getCabinetTransform } from './utils/geometry'
 
-const DEFAULT_CABINETS = [
-  { id: '1', code: 'G88', type: 'tall', width: 0.6, height: 2.0, depth: 0.6, wall: 'right', offset: 0.3 },
-  { id: '2', code: 'SPUD80', type: 'base_sink', width: 0.8, height: 0.8, depth: 0.6, wall: 'right', offset: 1.0 },
-  { id: '3', code: 'GSB60-I', type: 'base_dishwasher', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 1.7 },
-  { id: '4', code: 'SPUD60', type: 'base_sink', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 2.3 },
-  { id: '5', code: 'UD60', type: 'base_door', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 2.9 },
-  { id: '6', code: 'KA60', type: 'base_drawer', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 3.5 },
-  { id: '7', code: 'UA60', type: 'base_drawer', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 4.1 },
-  { id: '8', code: 'W60-3', type: 'wall', width: 0.6, height: 0.7, depth: 0.35, wall: 'right', offset: 2.9 },
-  { id: '9', code: 'WDAF60-3', type: 'wall_extractor', width: 0.6, height: 0.7, depth: 0.35, wall: 'right', offset: 3.5 },
-  { id: '10', code: 'W60-3', type: 'wall', width: 0.6, height: 0.7, depth: 0.35, wall: 'right', offset: 4.1 },
-]
-
 const DEFAULT_MATERIAL = { 
   id: 'natural_oak', 
   name: 'Natuurlijk Eiken', 
@@ -25,16 +12,11 @@ const DEFAULT_MATERIAL = {
   previewColor: '#cfa976' 
 }
 
-const DEFAULT_OPENINGS = [
-  { id: 'o1', type: 'window', wall: 'back', offset: 2.0, width: 1.2, height: 1.2, sillHeight: 0.9 },
-  { id: 'o2', type: 'door', wall: 'right', offset: 4.5, width: 0.8, height: 2.0 }
-]
-
 export default function App() {
   const [roomShape, setRoomShape] = useState('L-shape') // 'straight' | 'L-shape' | 'U-shape'
   const [wallLengths, setWallLengths] = useState({ back: 4.0, right: 4.74, left: 3.0 })
-  const [cabinets, setCabinets] = useState(DEFAULT_CABINETS)
-  const [openings, setOpenings] = useState(DEFAULT_OPENINGS)
+  const [cabinets, setCabinets] = useState([])
+  const [openings, setOpenings] = useState([])
   const [selectedCabinetId, setSelectedCabinetId] = useState(null)
   const [selectedMaterial, setSelectedMaterial] = useState(DEFAULT_MATERIAL)
   
