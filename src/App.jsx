@@ -4,12 +4,12 @@ import ThreeDView from './components/ThreeDView'
 import TwoDView from './components/TwoDView'
 import { getWalls, getCabinetTransform } from './utils/geometry'
 
-const DEFAULT_MATERIAL = { 
-  id: 'natural_oak', 
-  name: 'Natuurlijk Eiken', 
-  color: '#bfa37a', 
-  roughness: 0.5, 
-  previewColor: '#cfa976' 
+const DEFAULT_MATERIAL = {
+  id: 'natural_oak',
+  name: 'Natuurlijk Eiken',
+  color: '#bfa37a',
+  roughness: 0.5,
+  previewColor: '#cfa976'
 }
 
 export default function App() {
@@ -19,7 +19,8 @@ export default function App() {
   const [openings, setOpenings] = useState([])
   const [selectedCabinetId, setSelectedCabinetId] = useState(null)
   const [selectedMaterial, setSelectedMaterial] = useState(DEFAULT_MATERIAL)
-  
+  const [floorType, setFloorType] = useState('wood') // 'tiles' | 'wood'
+
   // Placement / drag states
   const [placingCabinet, setPlacingCabinet] = useState(null) // cabinet data being placed
   const [hoveredWallId, setHoveredWallId] = useState(null)
@@ -116,7 +117,7 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Sidebar */}
-      <Sidebar 
+      <Sidebar
         cabinets={cabinets}
         openings={openings}
         onAddCabinet={handleAddCabinet}
@@ -135,25 +136,29 @@ export default function App() {
         onUpdateOpening={handleUpdateOpening}
         placingCabinet={placingCabinet}
         onCancelPlacement={() => setPlacingCabinet(null)}
+        onUpdateCabinetPos={handleUpdateCabinetPos}
+        floorType={floorType}
+        onSelectFloorType={setFloorType}
       />
 
       {/* Main split-screen: 3D View links en 2D Plattegrond rechts */}
       <main className="main-content">
         {/* 3D Scene */}
-         <ThreeDView 
-           cabinets={cabinetsWithTransforms}
-           openings={openings}
-           selectedCabinetId={selectedCabinetId}
-           onSelectCabinet={setSelectedCabinetId}
-           selectedMaterial={selectedMaterial}
-           wallDimensions={wallLengths}
-           roomShape={roomShape}
-           hoveredWallId={hoveredWallId}
-           hoveredOffset={hoveredOffset}
-         />
+        <ThreeDView
+          cabinets={cabinetsWithTransforms}
+          openings={openings}
+          selectedCabinetId={selectedCabinetId}
+          onSelectCabinet={setSelectedCabinetId}
+          selectedMaterial={selectedMaterial}
+          wallDimensions={wallLengths}
+          roomShape={roomShape}
+          hoveredWallId={hoveredWallId}
+          hoveredOffset={hoveredOffset}
+          floorType={floorType}
+        />
 
         {/* 2D Plattegrond */}
-        <TwoDView 
+        <TwoDView
           cabinets={cabinets}
           openings={openings}
           selectedCabinetId={selectedCabinetId}
@@ -169,6 +174,8 @@ export default function App() {
             setHoveredWallId(wallId)
             setHoveredOffset(offset)
           }}
+          onDeleteCabinet={handleDeleteCabinet}
+          onAddCabinet={handleAddCabinet}
         />
       </main>
     </div>

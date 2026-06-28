@@ -58,6 +58,58 @@ function createWoodTexture(baseColorHex, grainColorHex) {
   return texture
 }
 
+// Helper om een houten parketvloer textuur te genereren
+function createFloorTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  
+  // Warme basis houtkleur
+  ctx.fillStyle = '#dfc3a3'
+  ctx.fillRect(0, 0, 512, 512)
+  
+  // Teken parketplanken
+  ctx.strokeStyle = '#c5a583'
+  ctx.lineWidth = 1.5
+  const plankWidth = 64
+  const plankLength = 256
+  
+  for (let i = 0; i < 512; i += plankWidth) {
+    // Verticale lijnen
+    ctx.beginPath()
+    ctx.moveTo(i, 0)
+    ctx.lineTo(i, 512)
+    ctx.stroke()
+    
+    // Horizontale naden (staggered)
+    const offset = (i / plankWidth) % 2 * 128
+    for (let j = offset; j < 512 + 256; j += plankLength) {
+      ctx.beginPath()
+      ctx.moveTo(i, j % 512)
+      ctx.lineTo(i + plankWidth, j % 512)
+      ctx.stroke()
+    }
+  }
+  
+  // Fijne houtnerven toevoegen voor realisme
+  ctx.fillStyle = '#b59573'
+  for (let k = 0; k < 1500; k++) {
+    ctx.globalAlpha = 0.03
+    const rx = Math.random() * 512
+    const ry = Math.random() * 512
+    const rw = 2 + Math.random() * 60
+    const rh = 1
+    ctx.fillRect(rx, ry, rw, rh)
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(4, 4)
+  return texture
+}
+
 // 3D Cabinet Component
 function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial }) {
   const { width, height, depth, position, type, code } = cabinet
@@ -99,18 +151,42 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
     }
 
     if (type === 'wall' || type === 'wall_extractor') {
-      // Bovenkast: 1 of 2 draaideuren afhankelijk van breedte
+      const hasDoubleDoors = width >= 0.8
       return (
         <group position={[0, 0, depth / 2 + frontDepth / 2]}>
-          <mesh>
-            <boxGeometry args={[width - gap, height - gap, frontDepth]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
-          {/* Vertical handgreep onderaan de deur */}
-          <mesh position={[width / 2 - 0.05, -height / 2 + 0.1, frontDepth / 2 + 0.01]}>
-            <cylinderGeometry args={[0.005, 0.005, 0.10, 8]} />
-            <primitive object={metalMaterial} attach="material" />
-          </mesh>
+          {hasDoubleDoors ? (
+            <>
+              <mesh position={[-width / 4, 0, 0]}>
+                <boxGeometry args={[width / 2 - gap, height - gap, frontDepth]} />
+                <primitive object={woodMaterial} attach="material" />
+              </mesh>
+              <mesh position={[width / 4, 0, 0]}>
+                <boxGeometry args={[width / 2 - gap, height - gap, frontDepth]} />
+                <primitive object={woodMaterial} attach="material" />
+              </mesh>
+              {/* Handgrepen onderaan */}
+              <mesh position={[-0.02, -height / 2 + 0.12, frontDepth / 2 + 0.01]}>
+                <cylinderGeometry args={[0.005, 0.005, 0.10, 8]} />
+                <primitive object={metalMaterial} attach="material" />
+              </mesh>
+              <mesh position={[0.02, -height / 2 + 0.12, frontDepth / 2 + 0.01]}>
+                <cylinderGeometry args={[0.005, 0.005, 0.10, 8]} />
+                <primitive object={metalMaterial} attach="material" />
+              </mesh>
+            </>
+          ) : (
+            <>
+              <mesh>
+                <boxGeometry args={[width - gap, height - gap, frontDepth]} />
+                <primitive object={woodMaterial} attach="material" />
+              </mesh>
+              {/* Vertical handgreep onderaan de deur */}
+              <mesh position={[width / 2 - 0.05, -height / 2 + 0.12, frontDepth / 2 + 0.01]}>
+                <cylinderGeometry args={[0.005, 0.005, 0.10, 8]} />
+                <primitive object={metalMaterial} attach="material" />
+              </mesh>
+            </>
+          )}
           {/* Afzuigkap kap onderkant indien afzuigkast */}
           {type === 'wall_extractor' && (
             <mesh position={[0, -height / 2 - 0.02, -depth / 4]} castShadow>
@@ -118,6 +194,35 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
               <meshStandardMaterial color="#333333" roughness={0.3} metalness={0.8} />
             </mesh>
           )}
+        </group>
+      )
+    }
+
+    // Hoekonderkast (Corner cabinet)
+    if (type === 'corner_L') {
+      const isLeftCorner = !(cabinet.wall === 'back' && cabinet.offset > 1.5)
+      const xSign = isLeftCorner ? -1 : 1
+      return (
+        <group>
+          {/* Door 1 (facing forward) */}
+          <mesh position={[xSign * 0.3, 0, 0.45 + frontDepth / 2]} castShadow>
+            <boxGeometry args={[0.3 - gap, height - gap, frontDepth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Door 2 (facing sideways) */}
+          <mesh position={[xSign * (0.15 - frontDepth / 2), 0, 0.3]} castShadow>
+            <boxGeometry args={[frontDepth, height - gap, 0.3 - gap]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Handles */}
+          <mesh position={[xSign * 0.17, 0.15, 0.45 + frontDepth + 0.01]}>
+            <cylinderGeometry args={[0.005, 0.005, 0.10, 8]} />
+            <primitive object={metalMaterial} attach="material" />
+          </mesh>
+          <mesh position={[xSign * (0.15 - frontDepth - 0.01), 0.15, 0.43]}>
+            <cylinderGeometry args={[0.005, 0.005, 0.10, 8]} />
+            <primitive object={metalMaterial} attach="material" />
+          </mesh>
         </group>
       )
     }
@@ -321,8 +426,10 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
     return null
   }
 
-  // Roteer en positioneer de kast op basis van de wand ('right' of 'back')
-  const groupRotation = cabinet.wall === 'right' ? [0, -Math.PI / 2, 0] : [0, 0, 0]
+  // Roteer en positioneer de kast op basis van de wand
+  const groupRotation = [0, cabinet.rotation || 0, 0]
+
+  const isCorner = type === 'corner_L'
 
   return (
     <group 
@@ -342,10 +449,23 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       )}
 
       {/* Main Cabinet Carcass (de body) */}
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[width, height, depth]} />
-        <primitive object={woodMaterial} attach="material" />
-      </mesh>
+      {isCorner ? (
+        <group>
+          <mesh position={[0, 0, -0.15]} castShadow receiveShadow>
+            <boxGeometry args={[width, height, 0.6]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          <mesh position={[cabinet.offset > 1.5 ? -0.3 : 0.3, 0, 0.3]} castShadow receiveShadow>
+            <boxGeometry args={[0.3, height, 0.3]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+        </group>
+      ) : (
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[width, height, depth]} />
+          <primitive object={woodMaterial} attach="material" />
+        </mesh>
+      )}
 
       {/* Kastdeurtjes / Ladefronten */}
       {renderFronts()}
@@ -363,22 +483,36 @@ export default function ThreeDView({
   selectedMaterial,
   wallDimensions = { back: 4.0, right: 4.74 },
   roomShape = 'L-shape',
-  openings = []
+  openings = [],
+  floorType = 'wood',
 }) {
+  const woodFloorTexture = useMemo(() => createFloorTexture(), [])
+
   // PBR-achtige materialen maken op basis van de geselecteerde houtkleur
   const materials = useMemo(() => {
-    // Genereer de nerf-textuur
-    const woodTexture = createWoodTexture(selectedMaterial.color, '#000000')
+    const isSolid = selectedMaterial.id.startsWith('matte')
     
-    // Hout materiaal
-    const woodMaterial = new THREE.MeshStandardMaterial({
-      map: woodTexture,
-      roughness: selectedMaterial.roughness,
-      metalness: 0.05,
-      bumpMap: woodTexture,
-      bumpScale: 0.001
-    })
-
+    let woodMaterial
+    if (isSolid) {
+      woodMaterial = new THREE.MeshStandardMaterial({
+        color: selectedMaterial.color,
+        roughness: selectedMaterial.roughness,
+        metalness: 0.1
+      })
+    } else {
+      // Genereer de nerf-textuur
+      const woodTexture = createWoodTexture(selectedMaterial.color, '#000000')
+      
+      // Hout materiaal
+      woodMaterial = new THREE.MeshStandardMaterial({
+        map: woodTexture,
+        roughness: selectedMaterial.roughness,
+        metalness: 0.05,
+        bumpMap: woodTexture,
+        bumpScale: 0.001
+      })
+    }
+    
     // Werkblad materiaal (beton/steen look)
     const stoneMaterial = new THREE.MeshStandardMaterial({
       color: '#4f5255',
@@ -405,48 +539,54 @@ export default function ThreeDView({
 
     baseWalls.forEach(wallId => {
       const baseCabinets = cabinets.filter(
-        c => c.wall === wallId && c.type.startsWith('base')
+        c => c.wall === wallId && (c.type.startsWith('base') || ['door', 'drawers', 'sink', 'corner_L'].includes(c.type))
       )
       if (baseCabinets.length === 0) return
 
       const wall = walls.find(w => w.id === wallId)
       if (!wall) return
 
-      baseCabinets.sort((a, b) => a.offset - b.offset)
+      // Bereken de exacte uiterste grenzen van de kastenrun
+      let minOffset = Infinity
+      let maxOffset = -Infinity
+      baseCabinets.forEach(c => {
+        const start = c.offset - c.width / 2
+        const end = c.offset + c.width / 2
+        if (start < minOffset) minOffset = start
+        if (end > maxOffset) maxOffset = end
+      })
 
-      const startOffset = baseCabinets[0].offset
-      const endOffset = baseCabinets[baseCabinets.length - 1].offset
+      const totalLen = maxOffset - minOffset
+      const centerOffset = (minOffset + maxOffset) / 2
 
-      const sx3 = wall.x1 + ((wall.x2 - wall.x1) / wall.length) * startOffset
-      const sw3 = wall.z1 + ((wall.z2 - wall.z1) / wall.length) * startOffset
-      const ex3 = wall.x1 + ((wall.x2 - wall.x1) / wall.length) * endOffset
-      const ew3 = wall.z1 + ((wall.z2 - wall.z1) / wall.length) * endOffset
+      const dx = (wall.x2 - wall.x1) / wall.length
+      const dz = (wall.z2 - wall.z1) / wall.length
 
-      const centerX3 = (sx3 + ex3) / 2
-      const centerW3 = (sw3 + ew3) / 2
-      const totalLen = Math.sqrt((ex3 - sx3) ** 2 + (ew3 - sw3) ** 2)
-
-      const dx = (ex3 - sx3) / totalLen
-      const dz = (ew3 - sw3) / totalLen
+      const centerX = wall.x1 + centerOffset * dx
+      const centerZ = wall.z1 + centerOffset * dz
 
       const worktopThickness = 0.04
       const worktopDepth = 0.61
       const plinthHeight = 0.1
 
-      const nx = wall.normalX
-      const nz = wall.normalZ
-      const y = 0.8 + worktopThickness / 2
+      const y = 0.8 + 0.1 + worktopThickness / 2
       const py = plinthHeight / 2
 
       elements.push(
-        <group key={`wt-${wallId}`}>
-          <mesh position={[centerX3 + nx * (worktopDepth / 2 - 0.005), y, centerW3 + nz * (worktopDepth / 2 - 0.005)]} castShadow receiveShadow>
-            <boxGeometry args={[worktopDepth, worktopThickness, totalLen]} />
+        <group 
+          key={`wt-${wallId}`} 
+          position={[centerX, 0, centerZ]} 
+          rotation={[0, wall.angle, 0]}
+        >
+          {/* Worktop */}
+          <mesh position={[0, y, worktopDepth / 2 - 0.005]} castShadow receiveShadow>
+            <boxGeometry args={[totalLen, worktopThickness, worktopDepth]} />
             <primitive object={materials.stoneMaterial} attach="material" />
           </mesh>
-          <mesh position={[centerX3 + nx * 0.01, py, centerW3 + nz * 0.01]} castShadow receiveShadow>
-            <boxGeometry args={[0.02, plinthHeight, totalLen]} />
-            <meshStandardMaterial color="#2c2b29" roughness={0.9} />
+          {/* Plinth (Front, recessed by 7cm) */}
+          <mesh position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
+            <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
+            <primitive object={materials.woodMaterial} attach="material" />
           </mesh>
         </group>
       )
@@ -581,10 +721,14 @@ export default function ThreeDView({
           )
         })}
 
-        {/* Vloer (Grijze plavuizen) */}
+        {/* Vloer */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-wallDimensions.back / 2, 0, wallDimensions.right / 2]} receiveShadow>
           <planeGeometry args={[wallDimensions.back, wallDimensions.right]} />
-          <meshStandardMaterial color="#918d83" roughness={0.5} />
+          {floorType === 'wood' ? (
+            <meshStandardMaterial map={woodFloorTexture} roughness={0.4} />
+          ) : (
+            <meshStandardMaterial color="#918d83" roughness={0.5} />
+          )}
         </mesh>
 
         {/* Fijn raster op de vloer voor IKEA-gevoel */}

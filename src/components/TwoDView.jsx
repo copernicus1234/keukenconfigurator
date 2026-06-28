@@ -49,8 +49,9 @@ function DimLine({ x1, y1, x2, y2, label, offset = 20, vertical = false }) {
 }
 
 // Draw a cabinet rectangle in SVG given wall geometry and offset
-function CabinetRect({ cab, wall, isSelected, onSelect }) {
+function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCabinet }) {
   const isWallCab = cab.type.startsWith('wall')
+  const isCorner = cab.type === 'corner_L'
   const widthPx = cab.width * SCALE
   const depthPx = (isWallCab ? 0.35 : cab.depth) * SCALE
 
@@ -63,29 +64,55 @@ function CabinetRect({ cab, wall, isSelected, onSelect }) {
   const cz3 = wall.z1 + dsz * cab.offset
   const { sx: cx, sy: cy } = toSvg(cx3, cz3)
 
-  // Half-extents for the rect: along-wall and into-room
-  const halfW = widthPx / 2
-  // Normal direction (inward) in SVG — same sign convention
-  const nx = wall.normalX * SCALE
-  const nz = wall.normalZ * SCALE
+  let pts = ""
+  let lx = 0
+  let ly = 0
 
-  // Four corners: start from wall surface, go inward by depth
-  // Along-wall direction in SVG
-  const ax = dsx * SCALE
-  const az = dsz * SCALE
+  if (isCorner) {
+    const isLeftCorner = !(cab.wall === 'back' && cab.offset > wall.length / 2)
+    const localPts = isLeftCorner
+      ? [
+          [-0.45, -0.45],
+          [0.45, -0.45],
+          [0.45, 0.15],
+          [0.15, 0.15],
+          [0.15, 0.45],
+          [-0.45, 0.45]
+        ]
+      : [
+          [0.45, -0.45],
+          [-0.45, -0.45],
+          [-0.45, 0.15],
+          [-0.15, 0.15],
+          [-0.15, 0.45],
+          [0.45, 0.45]
+        ]
 
-  // Rect corners (relative to center cx,cy):
-  // c ± halfW * (along-wall) ± depthPx/SCALE * (normal)
-  const corners = [
-    [cx - halfW * dsx - 0, cy - halfW * dsz],      // along-wall start, at wall surface
-    [cx + halfW * dsx,     cy + halfW * dsz],      // along-wall end, at wall surface
-    [cx + halfW * dsx + depthPx * wall.normalX,
-     cy + halfW * dsz + depthPx * wall.normalZ],   // along-wall end, into room
-    [cx - halfW * dsx + depthPx * wall.normalX,
-     cy - halfW * dsz + depthPx * wall.normalZ],   // along-wall start, into room
-  ]
+    const worldPts = localPts.map(([localX, localZ]) => {
+      const wx = wall.x1 + (cab.offset + localX) * dsx + (localZ + 0.45) * wall.normalX
+      const wz = wall.z1 + (cab.offset + localX) * dsz + (localZ + 0.45) * wall.normalZ
+      return toSvg(wx, wz)
+    })
 
-  const pts = corners.map(([x, y]) => `${x},${y}`).join(' ')
+    pts = worldPts.map(({ sx, sy }) => `${sx},${sy}`).join(' ')
+    lx = worldPts.reduce((s, p) => s + p.sx, 0) / 6
+    ly = worldPts.reduce((s, p) => s + p.sy, 0) / 6
+  } else {
+    // Half-extents for the rect: along-wall and into-room
+    const halfW = widthPx / 2
+    // Four corners: start from wall surface, go inward by depth
+    const corners = [
+      [cx - halfW * dsx,      cy - halfW * dsz],      // along-wall start, at wall surface
+      [cx + halfW * dsx,      cy + halfW * dsz],      // along-wall end, at wall surface
+      [cx + halfW * dsx + depthPx * wall.normalX,
+       cy + halfW * dsz + depthPx * wall.normalZ],   // along-wall end, into room
+      [cx - halfW * dsx + depthPx * wall.normalX,
+       cy - halfW * dsz + depthPx * wall.normalZ],   // along-wall start, into room
+    ]
+    pts = corners.map(([x, y]) => `${x},${y}`).join(' ')
+    lx = corners.reduce((s, c) => s + c[0], 0) / 4
+    ly = corners.reduce((s, c) => s + c[1], 0) / 4
+  }
 
   const fill = isSelected
     ? '#f5ede0'
@@ -95,12 +122,133 @@ function CabinetRect({ cab, wall, isSelected, onSelect }) {
 
   const stroke = isSelected ? '#826242' : isWallCab ? '#8c887d' : '#2c2b29'
 
-  // Label position: center of the polygon
-  const lx = corners.reduce((s, c) => s + c[0], 0) / 4
-  const ly = corners.reduce((s, c) => s + c[1], 0) / 4
-
   // Angle for rotated text along wall
   const angle = Math.atan2(dsz, dsx) * 180 / Math.PI
+
+  // Position for action buttons (+/-) near the front edge
+  const btnOffset = depthPx + 20
+  const btnX = cx + btnOffset * wall.normalX
+  const btnY = cy + btnOffset * wall.normalZ
+
+  // Drawer lines
+  const drawerLines = []
+  if (cab.type === 'drawers' || cab.type === 'base_drawer') {
+    const d1 = depthPx * 0.33
+    const d2 = depthPx * 0.66
+    const halfW = widthPx / 2
+    drawerLines.push(
+      <line
+        key="d1"
+        x1={cx - halfW * dsx + d1 * wall.normalX}
+        y1={cy - halfW * dsz + d1 * wall.normalZ}
+        x2={cx + halfW * dsx + d1 * wall.normalX}
+        y2={cy + halfW * dsz + d1 * wall.normalZ}
+        stroke="#a6a297"
+        strokeWidth="1"
+        strokeDasharray="2,2"
+      />,
+      <line
+        key="d2"
+        x1={cx - halfW * dsx + d2 * wall.normalX}
+        y1={cy - halfW * dsz + d2 * wall.normalZ}
+        x2={cx + halfW * dsx + d2 * wall.normalX}
+        y2={cy + halfW * dsz + d2 * wall.normalZ}
+        stroke="#a6a297"
+        strokeWidth="1"
+        strokeDasharray="2,2"
+      />
+    )
+  }
+
+  // Handles
+  const handleElements = []
+  const halfW = widthPx / 2
+  const handleColor = isSelected ? '#826242' : '#8c887d'
+
+  if (isCorner) {
+    const isLeftCorner = !(cab.wall === 'back' && cab.offset > wall.length / 2)
+    const hx_local = isLeftCorner ? 0.15 : -0.15
+    const hz_local = 0.15
+    const hwx = wall.x1 + (cab.offset + hx_local) * dsx + (hz_local + 0.45) * wall.normalX
+    const hwz = wall.z1 + (cab.offset + hx_local) * dsz + (hz_local + 0.45) * wall.normalZ
+    const { sx: hcx, sy: hcy } = toSvg(hwx, hwz)
+
+    handleElements.push(
+      <line
+        key="h1"
+        x1={hcx}
+        y1={hcy}
+        x2={hcx + 6 * wall.normalX}
+        y2={hcy + 6 * wall.normalZ}
+        stroke={handleColor}
+        strokeWidth="1.5"
+      />,
+      <line
+        key="h2"
+        x1={hcx}
+        y1={hcy}
+        x2={hcx - 6 * dsx}
+        y2={hcy - 6 * dsz}
+        stroke={handleColor}
+        strokeWidth="1.5"
+      />
+    )
+  } else if (cab.type === 'drawers' || cab.type === 'base_drawer') {
+    const fc_x = cx + depthPx * wall.normalX
+    const fc_y = cy + depthPx * wall.normalZ
+    handleElements.push(
+      <line
+        key="h-drawer"
+        x1={fc_x - 10 * dsx + 1.5 * wall.normalX}
+        y1={fc_y - 10 * dsz + 1.5 * wall.normalZ}
+        x2={fc_x + 10 * dsx + 1.5 * wall.normalX}
+        y2={fc_y + 10 * dsz + 1.5 * wall.normalZ}
+        stroke={handleColor}
+        strokeWidth="2"
+      />
+    )
+  } else {
+    const isDouble = cab.width >= 0.8
+    const fc_x = cx + depthPx * wall.normalX
+    const fc_y = cy + depthPx * wall.normalZ
+
+    if (isDouble) {
+      handleElements.push(
+        <line
+          key="h-double-l"
+          x1={fc_x - 3 * dsx}
+          y1={fc_y - 3 * dsz}
+          x2={fc_x - 3 * dsx + 5 * wall.normalX}
+          y2={fc_y - 3 * dsz + 5 * wall.normalZ}
+          stroke={handleColor}
+          strokeWidth="1.5"
+        />,
+        <line
+          key="h-double-r"
+          x1={fc_x + 3 * dsx}
+          y1={fc_y + 3 * dsz}
+          x2={fc_x + 3 * dsx + 5 * wall.normalX}
+          y2={fc_y + 3 * dsz + 5 * wall.normalZ}
+          stroke={handleColor}
+          strokeWidth="1.5"
+        />
+      )
+    } else if (cab.type !== 'base_dishwasher') {
+      const hc_x = cx + (halfW - 6) * dsx + depthPx * wall.normalX
+      const hc_y = cy + (halfW - 6) * dsz + depthPx * wall.normalZ
+      handleElements.push(
+        <line
+          key="h-single"
+          x1={hc_x}
+          y1={hc_y}
+          x2={hc_x + 5 * wall.normalX}
+          y2={hc_y + 5 * wall.normalZ}
+          stroke={handleColor}
+          strokeWidth="1.5"
+        />
+      )
+    }
+  }
 
   return (
     <g onClick={() => onSelect(cab.id)} style={{ cursor: 'pointer' }}>
@@ -112,6 +260,8 @@ function CabinetRect({ cab, wall, isSelected, onSelect }) {
         strokeDasharray={isWallCab ? '4,3' : 'none'}
         rx="2"
       />
+      {drawerLines}
+      {handleElements}
       <text
         x={lx} y={ly}
         fontSize="8"
@@ -123,6 +273,27 @@ function CabinetRect({ cab, wall, isSelected, onSelect }) {
       >
         {cab.code}
       </text>
+
+      {isSelected && onDeleteCabinet && onAddCabinet && (
+        <g className="svg-action-buttons" onMouseDown={e => e.stopPropagation()}>
+          {/* Delete button (-) */}
+          <g 
+            onClick={(e) => { e.stopPropagation(); onDeleteCabinet(cab.id); }}
+            style={{ cursor: 'pointer' }}
+          >
+            <circle cx={btnX - 16} cy={btnY} r="10" fill="#bf4343" stroke="#ffffff" strokeWidth="1.5" />
+            <text x={btnX - 16} y={btnY} fill="#ffffff" fontSize="14" fontWeight="700" textAnchor="middle" dominantBaseline="middle">-</text>
+          </g>
+          {/* Duplicate button (+) */}
+          <g 
+            onClick={(e) => { e.stopPropagation(); onAddCabinet({ code: cab.code, type: cab.type, width: cab.width, height: cab.height, depth: cab.depth }); }}
+            style={{ cursor: 'pointer' }}
+          >
+            <circle cx={btnX + 16} cy={btnY} r="10" fill="#826242" stroke="#ffffff" strokeWidth="1.5" />
+            <text x={btnX + 16} y={btnY} fill="#ffffff" fontSize="12" fontWeight="700" textAnchor="middle" dominantBaseline="middle">+</text>
+          </g>
+        </g>
+      )}
     </g>
   )
 }
@@ -225,6 +396,8 @@ export default function TwoDView({
   onConfirmPlacement,
   onUpdateCabinetPos,
   onUpdateHoverPos,
+  onDeleteCabinet,
+  onAddCabinet,
 }) {
   const svgRef = useRef(null)
   const [draggingId, setDraggingId] = useState(null)
@@ -413,6 +586,8 @@ export default function TwoDView({
                   wall={wall}
                   isSelected={selectedCabinetId === cab.id}
                   onSelect={onSelectCabinet}
+                  onDeleteCabinet={onDeleteCabinet}
+                  onAddCabinet={onAddCabinet}
                 />
               </g>
             )

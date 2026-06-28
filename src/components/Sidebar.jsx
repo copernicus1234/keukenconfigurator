@@ -1,17 +1,14 @@
 import { useState } from 'react'
+import { KITCHEN_CATALOG } from '../constants/kitchenCatalog'
 
-const BESCHIKBARE_MODULES = [
-  { code: 'G88',     type: 'tall',             width: 0.6, height: 2.0, depth: 0.60, desc: 'Hoge kast koelkast/oven (60cm)' },
-  { code: 'UA60',    type: 'base_drawer',       width: 0.6, height: 0.8, depth: 0.60, desc: 'Ladekast 3 lades (60cm)' },
-  { code: 'US80',    type: 'base_door',         width: 0.8, height: 0.8, depth: 0.60, desc: 'Onderkast 2 deuren (80cm)' },
-  { code: 'SPUD80',  type: 'base_sink',         width: 0.8, height: 0.8, depth: 0.60, desc: 'Spoelkast (80cm)' },
-  { code: 'SPUD60',  type: 'base_sink',         width: 0.6, height: 0.8, depth: 0.60, desc: 'Spoelkast (60cm)' },
-  { code: 'GSB60-I', type: 'base_dishwasher',   width: 0.6, height: 0.8, depth: 0.60, desc: 'Vaatwasser front (60cm)' },
-  { code: 'W60-3',   type: 'wall',              width: 0.6, height: 0.7, depth: 0.35, desc: 'Bovenkast draaideur (60cm)' },
-  { code: 'WDAF60',  type: 'wall_extractor',    width: 0.6, height: 0.7, depth: 0.35, desc: 'Bovenkast afzuigkap (60cm)' },
-]
+const BESCHIKBARE_MODULES = KITCHEN_CATALOG.map(item => ({
+  ...item,
+  desc: item.name
+}))
 
 const MATERIALEN = [
+  { id: 'matte_white', name: 'Mat Wit', color: '#f7f6f2', roughness: 0.9, previewColor: '#ffffff' },
+  { id: 'matte_anthracite', name: 'Mat Antraciet', color: '#383a3d', roughness: 0.8, previewColor: '#383a3d' },
   { id: 'natural_oak', name: 'Natuurlijk Eiken', color: '#bfa37a', roughness: 0.5, previewColor: '#cfa976' },
   { id: 'smoked_oak',  name: 'Gerookt Eiken',    color: '#4e3d30', roughness: 0.6, previewColor: '#534337' },
   { id: 'washed_oak',  name: 'Wit Geolied',      color: '#dfd5c6', roughness: 0.4, previewColor: '#e5dbcc' },
@@ -44,6 +41,9 @@ export default function Sidebar({
   onUpdateOpening,
   placingCabinet,
   onCancelPlacement,
+  onUpdateCabinetPos,
+  floorType,
+  onSelectFloorType,
 }) {
   const [activeTab, setActiveTab] = useState('room') // 'room' | 'cabinets'
 
@@ -52,6 +52,8 @@ export default function Sidebar({
     : roomShape === 'L-shape'
     ? ['back', 'right']
     : ['back', 'right', 'left']
+
+  const selectedCabinet = cabinets.find(c => c.id === selectedCabinetId)
 
   return (
     <aside className="sidebar">
@@ -185,6 +187,27 @@ export default function Sidebar({
                       <span style={{ fontSize: '11px', color: '#8c887d' }}>cm</span>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Vloertype */}
+            <div>
+              <h2 className="section-title">Vloertype</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                {[['wood', '🪵 Hout'], ['tiles', '🏁 Tegels']].map(([id, label]) => (
+                  <button
+                    key={id}
+                    onClick={() => onSelectFloorType(id)}
+                    style={{
+                      padding: '8px 4px', border: '2px solid',
+                      borderColor: floorType === id ? '#826242' : '#e5e2db',
+                      borderRadius: '6px', background: floorType === id ? '#f7f3ec' : '#fff',
+                      cursor: 'pointer', fontSize: '11px', fontWeight: '600',
+                      color: floorType === id ? '#826242' : '#6c685d',
+                      transition: 'all 0.2s'
+                    }}
+                  >{label}</button>
                 ))}
               </div>
             </div>
@@ -335,6 +358,119 @@ export default function Sidebar({
               </div>
             </div>
 
+            {/* Geselecteerd element detail panel */}
+            {selectedCabinet && (
+              <div style={{
+                background: '#fcfbfa',
+                border: '1px solid #c49b6d',
+                borderRadius: '8px',
+                padding: '14px',
+                marginBottom: '20px',
+                boxShadow: '0 4px 12px rgba(130, 98, 66, 0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#826242' }}>
+                    Geselecteerd Element
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => onAddCabinet({ code: selectedCabinet.code, type: selectedCabinet.type, width: selectedCabinet.width, height: selectedCabinet.height, depth: selectedCabinet.depth })}
+                      style={{
+                        background: '#826242', color: 'white', border: 'none',
+                        width: '22px', height: '22px', borderRadius: '50%',
+                        fontSize: '14px', fontWeight: '700', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                      title="Dupliceren"
+                    >+</button>
+                    <button
+                      onClick={() => onDeleteCabinet(selectedCabinet.id)}
+                      style={{
+                        background: '#bf4343', color: 'white', border: 'none',
+                        width: '22px', height: '22px', borderRadius: '50%',
+                        fontSize: '14px', fontWeight: '700', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                      title="Verwijderen"
+                    >−</button>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#2c2b29' }}>
+                    {selectedCabinet.code} — {KITCHEN_CATALOG.find(item => item.code === selectedCabinet.code)?.name || 'Kast'}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#8c887d', marginTop: '2px' }}>
+                    Afmetingen: {Math.round(selectedCabinet.width * 100)}cm · {Math.round(selectedCabinet.depth * 100)}cm
+                  </div>
+                </div>
+
+                {/* Offset & Wall Controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid #e5e2db', paddingTop: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#6c685d' }}>Wand</span>
+                    <select
+                      value={selectedCabinet.wall}
+                      onChange={e => {
+                        const newWallId = e.target.value
+                        const targetWallLength = wallLengths[newWallId] || 4.0
+                        const newOffset = Math.min(targetWallLength - selectedCabinet.width / 2, Math.max(selectedCabinet.width / 2, selectedCabinet.offset))
+                        onUpdateCabinetPos(selectedCabinet.id, newWallId, newOffset)
+                      }}
+                      style={{
+                        padding: '4px 8px', border: '1px solid #e5e2db', borderRadius: '4px',
+                        fontSize: '12px', background: '#ffffff', color: '#2c2b29'
+                      }}
+                    >
+                      {visibleWalls.map(wId => (
+                        <option key={wId} value={wId}>{WALL_LABELS[wId]}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#6c685d' }}>Positie (cm)</span>
+                      <input
+                        type="number"
+                        value={Math.round(selectedCabinet.offset * 100)}
+                        min={Math.round(selectedCabinet.width * 50)}
+                        max={Math.round((wallLengths[selectedCabinet.wall] - selectedCabinet.width / 2) * 100)}
+                        step="1"
+                        onChange={e => {
+                          const val = parseFloat(e.target.value) / 100
+                          const maxVal = wallLengths[selectedCabinet.wall] - selectedCabinet.width / 2
+                          const minVal = selectedCabinet.width / 2
+                          const clamped = Math.max(minVal, Math.min(maxVal, isNaN(val) ? minVal : val))
+                          onUpdateCabinetPos(selectedCabinet.id, selectedCabinet.wall, clamped)
+                        }}
+                        style={{
+                          width: '65px', padding: '4px 6px', border: '1px solid #e5e2db',
+                          borderRadius: '4px', fontSize: '12px', textAlign: 'right', fontWeight: '600'
+                        }}
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min={Math.round(selectedCabinet.width * 50)}
+                      max={Math.round((wallLengths[selectedCabinet.wall] - selectedCabinet.width / 2) * 100)}
+                      value={Math.round(selectedCabinet.offset * 100)}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) / 100
+                        onUpdateCabinetPos(selectedCabinet.id, selectedCabinet.wall, val)
+                      }}
+                      style={{
+                        width: '100%', accentColor: '#826242', cursor: 'pointer', height: '4px',
+                        background: '#e5e2db', borderRadius: '2px', outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Opstelling */}
             <div>
               <h2 className="section-title">Opstelling ({cabinets.length})</h2>
@@ -360,7 +496,8 @@ export default function Sidebar({
                       <button
                         className="placed-delete-btn"
                         onClick={e => { e.stopPropagation(); onDeleteCabinet(cab.id) }}
-                      >×</button>
+                        style={{ fontSize: '20px', fontWeight: 'bold' }}
+                      >−</button>
                     </div>
                   ))}
                 </div>

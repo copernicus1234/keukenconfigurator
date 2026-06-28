@@ -74,7 +74,7 @@ export function getCabinetTransform(cabinet, walls) {
   if (cabinet.type === 'tall') {
     y = 1.0 // height 2.0 sits on floor -> center Y = 1.0
   } else if (cabinet.type.startsWith('wall')) {
-    y = 1.55 // floating wall cabinet -> center Y = 1.55
+    y = 1.65 // floating wall cabinet -> center Y = 1.65 (maintains a 41cm gap above 94cm worktop)
   }
 
   return {
@@ -173,19 +173,52 @@ export function getSnappedOffsetWithLength(
   sameWallCabs.forEach(c => {
     // Een bestaande kast c bezet de zone [c.offset - c.width/2, c.offset + c.width/2]
     // We kunnen snappen zodat we er links/boven tegenaan sluiten:
-    // Onze nieuwe kast moet eindigen waar c begint -> onze center offset = (c.offset - c.width/2) - cabWidth/2
     snapPoints.push({ 
       val: c.offset - c.width / 2 - cabWidth / 2, 
       desc: `Aansluiten links van ${c.code}` 
     })
     
     // Of we sluiten er rechts/onder tegenaan:
-    // Onze nieuwe kast moet beginnen waar c eindigt -> onze center offset = (c.offset + c.width/2) + cabWidth/2
     snapPoints.push({ 
       val: c.offset + c.width / 2 + cabWidth / 2, 
       desc: `Aansluiten rechts van ${c.code}` 
     })
   })
+
+  // 3. Snaps voor hoekkasten op aangrenzende muren (alleen voor onderkasten)
+  if (!isNewWallCab) {
+    cabinets.forEach(c => {
+      if (c.id !== excludeId && c.type === 'corner_L') {
+        // Corner back-right (meeting of back and right walls at offset 0)
+        if (
+          (c.wall === 'back' && Math.abs(c.offset - 0.45) < 0.05 && targetWallId === 'right') ||
+          (c.wall === 'right' && Math.abs(c.offset - 0.45) < 0.05 && targetWallId === 'back')
+        ) {
+          snapPoints.push({
+            val: 0.9 + cabWidth / 2,
+            desc: 'Aansluiten op hoekkast (hoek)'
+          })
+        }
+        
+        // Corner back-left (meeting of back wall at its end and left wall at offset 0)
+        if (c.wall === 'back' && targetWallId === 'left') {
+          // If the corner cabinet on the back wall is on the left side (offset is large)
+          if (c.offset > 1.5) {
+            snapPoints.push({
+              val: 0.9 + cabWidth / 2,
+              desc: 'Aansluiten op hoekkast (hoek)'
+            })
+          }
+        }
+        if (c.wall === 'left' && Math.abs(c.offset - 0.45) < 0.05 && targetWallId === 'back') {
+          snapPoints.push({
+            val: wallLength - 0.9 - cabWidth / 2,
+            desc: 'Aansluiten op hoekkast (hoek)'
+          })
+        }
+      }
+    })
+  }
 
   // Zoek naar de dichtstbijzijnde snap point
   let bestSnap = null
