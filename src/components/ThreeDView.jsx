@@ -480,6 +480,8 @@ export default function ThreeDView({
   cabinets,
   selectedCabinetId,
   onSelectCabinet,
+  selectedOpeningId,
+  onSelectOpening,
   selectedMaterial,
   wallDimensions = { back: 4.0, right: 4.74 },
   roomShape = 'L-shape',
@@ -615,9 +617,16 @@ export default function ThreeDView({
       if (opening.type === 'door') {
         const doorH = opening.height
         const doorW = opening.width
+        const isSelected = selectedOpeningId === opening.id
 
         return (
-          <group key={opening.id} position={[x, 0, z]} rotation={[0, wall.angle, 0]}>
+          <group key={opening.id} position={[x, 0, z]} rotation={[0, wall.angle, 0]} onClick={(e) => { e.stopPropagation(); onSelectOpening(opening.id); }}>
+            {isSelected && (
+              <mesh position={[0, doorH / 2, 0]}>
+                <boxGeometry args={[doorW + 0.02, doorH + 0.02, 0.06]} />
+                <meshBasicMaterial color="#c49b6d" wireframe />
+              </mesh>
+            )}
             <mesh position={[0, doorH / 2, 0.06]} receiveShadow>
               <boxGeometry args={[doorW - 0.04, doorH - 0.04, 0.04]} />
               <meshStandardMaterial color="#d4c8b8" roughness={0.5} metalness={0.05} />
@@ -639,9 +648,16 @@ export default function ThreeDView({
         const winW = opening.width
         const sillY = opening.sillHeight || 0.9
         const winCY = sillY + winH / 2
+        const isSelected = selectedOpeningId === opening.id
 
         return (
-          <group key={opening.id} position={[x, winCY, z]} rotation={[0, wall.angle, 0]}>
+          <group key={opening.id} position={[x, winCY, z]} rotation={[0, wall.angle, 0]} onClick={(e) => { e.stopPropagation(); onSelectOpening(opening.id); }}>
+            {isSelected && (
+              <mesh position={[0, 0, 0]}>
+                <boxGeometry args={[winW + 0.08, winH + 0.08, 0.06]} />
+                <meshBasicMaterial color="#c49b6d" wireframe />
+              </mesh>
+            )}
             <mesh position={[0, 0, 0.04]}>
               <boxGeometry args={[winW + 0.06, winH + 0.06, 0.04]} />
               <meshStandardMaterial color="#d4c8b8" roughness={0.5} metalness={0.05} />

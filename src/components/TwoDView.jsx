@@ -299,7 +299,7 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
 }
 
 // Draw a door symbol in SVG
-function DoorSymbol({ opening, wall }) {
+function DoorSymbol({ opening, wall, isSelected, onSelect, onDelete }) {
   const dsx = (wall.x2 - wall.x1) / wall.length
   const dsz = (wall.z2 - wall.z1) / wall.length
   const widthPx = opening.width * SCALE
@@ -312,37 +312,56 @@ function DoorSymbol({ opening, wall }) {
   const { sx: x1, sy: y1 } = toSvg(startX3, startZ3)
   const { sx: x2, sy: y2 } = toSvg(endX3, endZ3)
 
+  const cx = (x1 + x2) / 2
+  const cy = (y1 + y2) / 2
+  const btnOffset = 30
+  const btnX = cx + btnOffset * wall.normalX
+  const btnY = cy + btnOffset * wall.normalZ
+
   const arcR = widthPx
-  const sweepAngle = 90
   // Door swings into room (normal direction)
   const nx = wall.normalX
   const nz = wall.normalZ
-  const endArcX = x1 + nx * widthPx
+  const endArcX = x1 + nx * arcR
   const endArcY = y1 + nz * widthPx
 
+  const stroke = isSelected ? '#826242' : '#826242'
+  const strokeWidth = isSelected ? 2.5 : 1.5
+
   return (
-    <g>
+    <g onClick={() => onSelect(opening.id)} style={{ cursor: 'pointer' }}>
       {/* Opening gap */}
       <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fdfdfc" strokeWidth="10" />
       {/* Door leaf */}
-      <line x1={x1} y1={y1} x2={endArcX} y2={endArcY} stroke="#826242" strokeWidth="1.5" />
+      <line x1={x1} y1={y1} x2={endArcX} y2={endArcY} stroke={stroke} strokeWidth={strokeWidth} />
       {/* Swing arc */}
       <path
         d={`M ${x2} ${y2} A ${arcR} ${arcR} 0 0 ${nx < 0 || nz > 0 ? 0 : 1} ${endArcX} ${endArcY}`}
         fill="none"
-        stroke="#826242"
+        stroke={stroke}
         strokeWidth="1"
         strokeDasharray="3,2"
       />
+      {isSelected && onDelete && (
+        <g className="svg-action-buttons" onMouseDown={e => e.stopPropagation()}>
+          {/* Delete button (-) */}
+          <g
+            onClick={(e) => { e.stopPropagation(); onDelete(opening.id); }}
+            style={{ cursor: 'pointer' }}
+          >
+            <circle cx={btnX} cy={btnY} r="10" fill="#bf4343" stroke="#ffffff" strokeWidth="1.5" />
+            <text x={btnX} y={btnY} fill="#ffffff" fontSize="14" fontWeight="700" textAnchor="middle" dominantBaseline="middle">-</text>
+          </g>
+        </g>
+      )}
     </g>
   )
 }
 
 // Draw a window symbol in SVG
-function WindowSymbol({ opening, wall }) {
+function WindowSymbol({ opening, wall, isSelected, onSelect, onDelete }) {
   const dsx = (wall.x2 - wall.x1) / wall.length
   const dsz = (wall.z2 - wall.z1) / wall.length
-  const widthPx = opening.width * SCALE
   const halfDepthPx = 5
 
   const startX3 = wall.x1 + dsx * opening.offset
@@ -353,18 +372,39 @@ function WindowSymbol({ opening, wall }) {
   const { sx: x1, sy: y1 } = toSvg(startX3, startZ3)
   const { sx: x2, sy: y2 } = toSvg(endX3, endZ3)
 
+  const cx = (x1 + x2) / 2
+  const cy = (y1 + y2) / 2
+  const btnOffset = 30
+  const btnX = cx + btnOffset * wall.normalX
+  const btnY = cy + btnOffset * wall.normalZ
+
+  const stroke = isSelected ? '#826242' : '#7db8d4'
+  const strokeWidth = isSelected ? 2.5 : 2
+
   const nx = wall.normalX * halfDepthPx
   const nz = wall.normalZ * halfDepthPx
 
   return (
-    <g>
+    <g onClick={() => onSelect(opening.id)} style={{ cursor: 'pointer' }}>
       {/* Opening gap in wall */}
       <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fdfdfc" strokeWidth="10" />
       {/* Glass lines (double) */}
       <line x1={x1 + nx * 0.4} y1={y1 + nz * 0.4} x2={x2 + nx * 0.4} y2={y2 + nz * 0.4}
-        stroke="#7db8d4" strokeWidth="2" />
+        stroke={stroke} strokeWidth={strokeWidth} />
       <line x1={x1 + nx * 1.0} y1={y1 + nz * 1.0} x2={x2 + nx * 1.0} y2={y2 + nz * 1.0}
-        stroke="#7db8d4" strokeWidth="2" />
+        stroke={stroke} strokeWidth={strokeWidth} />
+      {isSelected && onDelete && (
+        <g className="svg-action-buttons" onMouseDown={e => e.stopPropagation()}>
+          {/* Delete button (-) */}
+          <g
+            onClick={(e) => { e.stopPropagation(); onDelete(opening.id); }}
+            style={{ cursor: 'pointer' }}
+          >
+            <circle cx={btnX} cy={btnY} r="10" fill="#bf4343" stroke="#ffffff" strokeWidth="1.5" />
+            <text x={btnX} y={btnY} fill="#ffffff" fontSize="14" fontWeight="700" textAnchor="middle" dominantBaseline="middle">-</text>
+          </g>
+        </g>
+      )}
     </g>
   )
 }
@@ -390,6 +430,8 @@ export default function TwoDView({
   openings,
   selectedCabinetId,
   onSelectCabinet,
+  selectedOpeningId,
+  onSelectOpening,
   wallDimensions,
   roomShape,
   placingCabinet,
@@ -398,6 +440,7 @@ export default function TwoDView({
   onUpdateHoverPos,
   onDeleteCabinet,
   onAddCabinet,
+  onDeleteOpening,
 }) {
   const svgRef = useRef(null)
   const [draggingId, setDraggingId] = useState(null)
@@ -568,12 +611,12 @@ export default function TwoDView({
 
           {/* Openings: windows & doors on top of walls */}
           {openings.map(o => {
-            const wall = walls.find(w => w.id === o.wall)
+const wall = walls.find(w => w.id === o.wall)
             if (!wall) return null
             return o.type === 'door'
-              ? <DoorSymbol key={o.id} opening={o} wall={wall} />
-              : <WindowSymbol key={o.id} opening={o} wall={wall} />
-          })}
+              ? <DoorSymbol key={o.id} opening={o} wall={wall} isSelected={selectedOpeningId === o.id} onSelect={onSelectOpening} onDelete={onDeleteOpening} />
+              : <WindowSymbol key={o.id} opening={o} wall={wall} isSelected={selectedOpeningId === o.id} onSelect={onSelectOpening} onDelete={onDeleteOpening} />
+            })}
 
           {/* Cabinets */}
           {cabinets.map(cab => {

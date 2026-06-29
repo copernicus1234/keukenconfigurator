@@ -18,6 +18,7 @@ export default function App() {
   const [cabinets, setCabinets] = useState([])
   const [openings, setOpenings] = useState([])
   const [selectedCabinetId, setSelectedCabinetId] = useState(null)
+  const [selectedOpeningId, setSelectedOpeningId] = useState(null)
   const [selectedMaterial, setSelectedMaterial] = useState(DEFAULT_MATERIAL)
   const [floorType, setFloorType] = useState('wood') // 'tiles' | 'wood'
 
@@ -55,6 +56,9 @@ export default function App() {
   // Verwijder opening
   const handleDeleteOpening = (id) => {
     setOpenings(prev => prev.filter(o => o.id !== id))
+    if (selectedOpeningId === id) {
+      setSelectedOpeningId(null)
+    }
   }
 
   // Update opening eigenschap
@@ -143,40 +147,45 @@ export default function App() {
 
       {/* Main split-screen: 3D View links en 2D Plattegrond rechts */}
       <main className="main-content">
-        {/* 3D Scene */}
-        <ThreeDView
-          cabinets={cabinetsWithTransforms}
-          openings={openings}
-          selectedCabinetId={selectedCabinetId}
-          onSelectCabinet={setSelectedCabinetId}
-          selectedMaterial={selectedMaterial}
-          wallDimensions={wallLengths}
-          roomShape={roomShape}
-          hoveredWallId={hoveredWallId}
-          hoveredOffset={hoveredOffset}
-          floorType={floorType}
-        />
+{/* 3D Scene */}
+         <ThreeDView
+           cabinets={cabinetsWithTransforms}
+           openings={openings}
+           selectedCabinetId={selectedCabinetId}
+           onSelectCabinet={setSelectedCabinetId}
+           selectedOpeningId={selectedOpeningId}
+           onSelectOpening={setSelectedOpeningId}
+           selectedMaterial={selectedMaterial}
+           wallDimensions={wallLengths}
+           roomShape={roomShape}
+           hoveredWallId={hoveredWallId}
+           hoveredOffset={hoveredOffset}
+           floorType={floorType}
+         />
 
-        {/* 2D Plattegrond */}
-        <TwoDView
-          cabinets={cabinets}
-          openings={openings}
-          selectedCabinetId={selectedCabinetId}
-          onSelectCabinet={setSelectedCabinetId}
-          wallDimensions={wallLengths}
-          roomShape={roomShape}
-          placingCabinet={placingCabinet}
-          onConfirmPlacement={handleConfirmPlacement}
-          onUpdateCabinetPos={handleUpdateCabinetPos}
-          hoveredWallId={hoveredWallId}
-          hoveredOffset={hoveredOffset}
-          onUpdateHoverPos={(wallId, offset) => {
-            setHoveredWallId(wallId)
-            setHoveredOffset(offset)
-          }}
-          onDeleteCabinet={handleDeleteCabinet}
-          onAddCabinet={handleAddCabinet}
-        />
+{/* 2D Plattegrond */}
+         <TwoDView
+           cabinets={cabinets}
+           openings={openings}
+           selectedCabinetId={selectedCabinetId}
+           onSelectCabinet={setSelectedCabinetId}
+           selectedOpeningId={selectedOpeningId}
+           onSelectOpening={setSelectedOpeningId}
+           wallDimensions={wallLengths}
+           roomShape={roomShape}
+           placingCabinet={placingCabinet}
+           onConfirmPlacement={handleConfirmPlacement}
+           onUpdateCabinetPos={handleUpdateCabinetPos}
+           hoveredWallId={hoveredWallId}
+           hoveredOffset={hoveredOffset}
+           onUpdateHoverPos={(wallId, offset) => {
+             setHoveredWallId(wallId)
+             setHoveredOffset(offset)
+           }}
+onDeleteCabinet={handleDeleteCabinet}
+            onAddCabinet={handleAddCabinet}
+            onDeleteOpening={handleDeleteOpening}
+          />
       </main>
     </div>
   )
