@@ -73,7 +73,8 @@ export default function App() {
       type: mod.type,
       width: mod.width,
       height: mod.height,
-      depth: mod.depth
+      depth: mod.depth,
+      price: mod.price || 0
     })
   }
 
@@ -89,13 +90,17 @@ export default function App() {
       height: placingCabinet.height,
       depth: placingCabinet.depth,
       wall: wallId,
-      offset: offset
+      offset: offset,
+      price: placingCabinet.price || 0
     }
 
     setCabinets(prev => [...prev, newCabinet])
     setPlacingCabinet(null)
     setHoveredWallId(null)
   }
+
+  // Live totaalprijs op basis van alle geplaatste kasten
+  const totalPrice = cabinets.reduce((sum, c) => sum + (c.price || 0), 0)
 
   // Verwijder kast
   const handleDeleteCabinet = (id) => {
@@ -143,6 +148,7 @@ export default function App() {
         onUpdateCabinetPos={handleUpdateCabinetPos}
         floorType={floorType}
         onSelectFloorType={setFloorType}
+        totalPrice={totalPrice}
       />
 
       {/* Main split-screen: 3D View links en 2D Plattegrond rechts */}

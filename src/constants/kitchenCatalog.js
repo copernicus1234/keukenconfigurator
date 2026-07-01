@@ -5,7 +5,8 @@ export const KITCHEN_CATALOG = [
     width: 0.6,
     height: 0.8,
     depth: 0.6,
-    type: 'door'
+    type: 'door',
+    price: 189
   },
   {
     code: 'ME103',
@@ -13,7 +14,8 @@ export const KITCHEN_CATALOG = [
     width: 0.8,
     height: 0.8,
     depth: 0.6,
-    type: 'door'
+    type: 'door',
+    price: 229
   },
   {
     code: 'ME201',
@@ -21,7 +23,8 @@ export const KITCHEN_CATALOG = [
     width: 0.6,
     height: 0.8,
     depth: 0.6,
-    type: 'drawers'
+    type: 'drawers',
+    price: 319
   },
   {
     code: 'ME301',
@@ -29,7 +32,8 @@ export const KITCHEN_CATALOG = [
     width: 0.6,
     height: 0.8,
     depth: 0.6,
-    type: 'sink'
+    type: 'sink',
+    price: 249
   },
   {
     code: 'WE101',
@@ -37,7 +41,8 @@ export const KITCHEN_CATALOG = [
     width: 0.6,
     height: 0.6,
     depth: 0.35,
-    type: 'wall'
+    type: 'wall',
+    price: 149
   },
   {
     code: 'WE201',
@@ -45,7 +50,8 @@ export const KITCHEN_CATALOG = [
     width: 0.6,
     height: 0.6,
     depth: 0.35,
-    type: 'wall_extractor'
+    type: 'wall_extractor',
+    price: 289
   },
   {
     code: 'ME401',
@@ -53,7 +59,8 @@ export const KITCHEN_CATALOG = [
     width: 0.9,
     height: 0.8,
     depth: 0.9,
-    type: 'corner_L'
+    type: 'corner_L',
+    price: 379
   },
   {
     code: 'HE101',
@@ -61,7 +68,8 @@ export const KITCHEN_CATALOG = [
     width: 0.6,
     height: 2.0,
     depth: 0.6,
-    type: 'tall'
+    type: 'tall',
+    price: 399
   },
   {
     code: 'WE102',
@@ -69,6 +77,7 @@ export const KITCHEN_CATALOG = [
     width: 0.8,
     height: 0.6,
     depth: 0.35,
-    type: 'wall'
+    type: 'wall',
+    price: 179
   }
 ]

@@ -44,6 +44,7 @@ export default function Sidebar({
   onUpdateCabinetPos,
   floorType,
   onSelectFloorType,
+  totalPrice = 0,
 }) {
   const [activeTab, setActiveTab] = useState('room') // 'room' | 'cabinets'
 
@@ -352,7 +353,18 @@ export default function Sidebar({
                       <span className="module-code">{mod.code}</span>
                       <span className="module-desc">{mod.desc}</span>
                     </div>
-                    <button className="module-add-btn">+</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                      <span style={{
+                        fontSize: '11px', fontWeight: '700',
+                        color: '#ffffff',
+                        background: 'linear-gradient(135deg, #826242, #a07850)',
+                        borderRadius: '10px',
+                        padding: '2px 8px',
+                        letterSpacing: '0.3px',
+                        whiteSpace: 'nowrap'
+                      }}>€ {mod.price}</span>
+                      <button className="module-add-btn">+</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -493,11 +505,19 @@ export default function Sidebar({
                           ({Math.round(cab.width * 100)}cm · {WALL_LABELS[cab.wall]})
                         </span>
                       </div>
-                      <button
-                        className="placed-delete-btn"
-                        onClick={e => { e.stopPropagation(); onDeleteCabinet(cab.id) }}
-                        style={{ fontSize: '20px', fontWeight: 'bold' }}
-                      >−</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {cab.price > 0 && (
+                          <span style={{
+                            fontSize: '10px', fontWeight: '700',
+                            color: '#826242',
+                          }}>€ {cab.price}</span>
+                        )}
+                        <button
+                          className="placed-delete-btn"
+                          onClick={e => { e.stopPropagation(); onDeleteCabinet(cab.id) }}
+                          style={{ fontSize: '20px', fontWeight: 'bold' }}
+                        >−</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -505,6 +525,48 @@ export default function Sidebar({
             </div>
           </>
         )}
+      </div>
+
+      {/* Live Totaalprijs */}
+      <div style={{
+        margin: '0 16px 12px',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        background: 'linear-gradient(135deg, #2c1f12 0%, #4a2f18 50%, #6b3f20 100%)',
+        boxShadow: '0 4px 20px rgba(130, 98, 66, 0.35)',
+        flexShrink: 0,
+      }}>
+        <div style={{ padding: '14px 18px' }}>
+          <div style={{
+            fontSize: '9px', fontWeight: '700', letterSpacing: '1.5px',
+            textTransform: 'uppercase', color: '#c49b6d', marginBottom: '6px'
+          }}>Geschatte Totaalprijs</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+            <span style={{
+              fontSize: '11px', fontWeight: '600', color: '#e8d4b8', lineHeight: 1
+            }}>€</span>
+            <span style={{
+              fontSize: '32px', fontWeight: '800', color: '#ffffff',
+              lineHeight: 1, letterSpacing: '-1px',
+              fontVariantNumeric: 'tabular-nums',
+              transition: 'all 0.3s ease'
+            }}>
+              {totalPrice.toLocaleString('nl-BE')}
+            </span>
+          </div>
+          <div style={{
+            marginTop: '8px', paddingTop: '8px',
+            borderTop: '1px solid rgba(196, 155, 109, 0.2)',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          }}>
+            <span style={{ fontSize: '10px', color: '#a07850' }}>
+              {cabinets.length} module{cabinets.length !== 1 ? 's' : ''} geselecteerd
+            </span>
+            <span style={{ fontSize: '9px', color: '#7a6040', fontStyle: 'italic' }}>
+              excl. BTW & plaatsing
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Footer */}
