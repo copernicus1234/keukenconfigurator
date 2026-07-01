@@ -148,7 +148,6 @@ export default function App() {
         onUpdateCabinetPos={handleUpdateCabinetPos}
         floorType={floorType}
         onSelectFloorType={setFloorType}
-        totalPrice={totalPrice}
       />
 
       {/* Main split-screen: 3D View links en 2D Plattegrond rechts */}
@@ -188,10 +187,11 @@ export default function App() {
              setHoveredWallId(wallId)
              setHoveredOffset(offset)
            }}
-onDeleteCabinet={handleDeleteCabinet}
-            onAddCabinet={handleAddCabinet}
-            onDeleteOpening={handleDeleteOpening}
-          />
+           onDeleteCabinet={handleDeleteCabinet}
+           onAddCabinet={handleAddCabinet}
+           onDeleteOpening={handleDeleteOpening}
+           totalPrice={totalPrice}
+         />
       </main>
     </div>
   )

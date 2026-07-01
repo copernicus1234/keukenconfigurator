@@ -72,21 +72,21 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
     const isLeftCorner = !(cab.wall === 'back' && cab.offset > wall.length / 2)
     const localPts = isLeftCorner
       ? [
-          [-0.45, -0.45],
-          [0.45, -0.45],
-          [0.45, 0.15],
-          [0.15, 0.15],
-          [0.15, 0.45],
-          [-0.45, 0.45]
-        ]
+        [-0.45, -0.45],
+        [0.45, -0.45],
+        [0.45, 0.15],
+        [0.15, 0.15],
+        [0.15, 0.45],
+        [-0.45, 0.45]
+      ]
       : [
-          [0.45, -0.45],
-          [-0.45, -0.45],
-          [-0.45, 0.15],
-          [-0.15, 0.15],
-          [-0.15, 0.45],
-          [0.45, 0.45]
-        ]
+        [0.45, -0.45],
+        [-0.45, -0.45],
+        [-0.45, 0.15],
+        [-0.15, 0.15],
+        [-0.15, 0.45],
+        [0.45, 0.45]
+      ]
 
     const worldPts = localPts.map(([localX, localZ]) => {
       const wx = wall.x1 + (cab.offset + localX) * dsx + (localZ + 0.45) * wall.normalX
@@ -102,12 +102,12 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
     const halfW = widthPx / 2
     // Four corners: start from wall surface, go inward by depth
     const corners = [
-      [cx - halfW * dsx,      cy - halfW * dsz],      // along-wall start, at wall surface
-      [cx + halfW * dsx,      cy + halfW * dsz],      // along-wall end, at wall surface
+      [cx - halfW * dsx, cy - halfW * dsz],      // along-wall start, at wall surface
+      [cx + halfW * dsx, cy + halfW * dsz],      // along-wall end, at wall surface
       [cx + halfW * dsx + depthPx * wall.normalX,
-       cy + halfW * dsz + depthPx * wall.normalZ],   // along-wall end, into room
+      cy + halfW * dsz + depthPx * wall.normalZ],   // along-wall end, into room
       [cx - halfW * dsx + depthPx * wall.normalX,
-       cy - halfW * dsz + depthPx * wall.normalZ],   // along-wall start, into room
+      cy - halfW * dsz + depthPx * wall.normalZ],   // along-wall start, into room
     ]
     pts = corners.map(([x, y]) => `${x},${y}`).join(' ')
     lx = corners.reduce((s, c) => s + c[0], 0) / 4
@@ -117,8 +117,8 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
   const fill = isSelected
     ? '#f5ede0'
     : isWallCab
-    ? 'none'
-    : cab.type === 'tall' ? '#eae6dc' : '#f5f4f0'
+      ? 'none'
+      : cab.type === 'tall' ? '#eae6dc' : '#f5f4f0'
 
   const stroke = isSelected ? '#826242' : isWallCab ? '#8c887d' : '#2c2b29'
 
@@ -277,7 +277,7 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
       {isSelected && onDeleteCabinet && onAddCabinet && (
         <g className="svg-action-buttons" onMouseDown={e => e.stopPropagation()}>
           {/* Delete button (-) */}
-          <g 
+          <g
             onClick={(e) => { e.stopPropagation(); onDeleteCabinet(cab.id); }}
             style={{ cursor: 'pointer' }}
           >
@@ -285,7 +285,7 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
             <text x={btnX - 16} y={btnY} fill="#ffffff" fontSize="14" fontWeight="700" textAnchor="middle" dominantBaseline="middle">-</text>
           </g>
           {/* Duplicate button (+) */}
-          <g 
+          <g
             onClick={(e) => { e.stopPropagation(); onAddCabinet({ code: cab.code, type: cab.type, width: cab.width, height: cab.height, depth: cab.depth }); }}
             style={{ cursor: 'pointer' }}
           >
@@ -419,7 +419,7 @@ function GhostCabinet({ cab, wall, offset }) {
         cab={ghost}
         wall={wall}
         isSelected={false}
-        onSelect={() => {}}
+        onSelect={() => { }}
       />
     </g>
   )
@@ -441,10 +441,11 @@ export default function TwoDView({
   onDeleteCabinet,
   onAddCabinet,
   onDeleteOpening,
+  totalPrice = 0,
 }) {
   const svgRef = useRef(null)
   const [draggingId, setDraggingId] = useState(null)
-  const [hoverWall, setHoverWall]   = useState(null)
+  const [hoverWall, setHoverWall] = useState(null)
   const [hoverOffset, setHoverOffset] = useState(0)
   const [snapActive, setSnapActive] = useState(false)
 
@@ -462,7 +463,7 @@ export default function TwoDView({
     if (!svgRef.current) return
     const rect = svgRef.current.getBoundingClientRect()
     const svgX = (e.clientX - rect.left) * (SVG_W / rect.width)
-    const svgY = (e.clientY - rect.top)  * (SVG_H / rect.height)
+    const svgY = (e.clientY - rect.top) * (SVG_H / rect.height)
     const { rx, rz } = svgToRoom(svgX, svgY)
 
     const { wall, offset } = getClosestWallAndOffset(rx, rz, walls)
@@ -550,10 +551,10 @@ export default function TwoDView({
       const label = `${Math.round(wall.length * 100)} cm`
       const isVert = Math.abs(sx1 - sx2) < 2
       if (isVert) {
-        return <DimLine key={wall.id} x1={sx1} y1={Math.min(sy1,sy2)} x2={sx2} y2={Math.max(sy1,sy2)}
+        return <DimLine key={wall.id} x1={sx1} y1={Math.min(sy1, sy2)} x2={sx2} y2={Math.max(sy1, sy2)}
           label={label} offset={30} vertical />
       }
-      return <DimLine key={wall.id} x1={Math.min(sx1,sx2)} y1={sy1} x2={Math.max(sx1,sx2)} y2={sy2}
+      return <DimLine key={wall.id} x1={Math.min(sx1, sx2)} y1={sy1} x2={Math.max(sx1, sx2)} y2={sy2}
         label={label} offset={22} />
     })
   }
@@ -564,7 +565,14 @@ export default function TwoDView({
   return (
     <div className="flatplan-container">
       <div className="flatplan-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>Plattegrond (2D)</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+          <span style={{ fontSize: '16px', fontWeight: '600', color: '#8c887d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Geschatte totaalprijs:
+          </span>
+          <span style={{ fontSize: '20px', fontWeight: '700', color: '#826242' }}>
+            € {totalPrice.toLocaleString('nl-BE')}
+          </span>
+        </div>
         {snapActive && hoverWall && (
           <span style={{ fontSize: '11px', color: '#826242', fontWeight: '700', background: '#f7f3ec', padding: '2px 8px', borderRadius: '10px' }}>
             ◎ SNAP
@@ -611,12 +619,12 @@ export default function TwoDView({
 
           {/* Openings: windows & doors on top of walls */}
           {openings.map(o => {
-const wall = walls.find(w => w.id === o.wall)
+            const wall = walls.find(w => w.id === o.wall)
             if (!wall) return null
             return o.type === 'door'
               ? <DoorSymbol key={o.id} opening={o} wall={wall} isSelected={selectedOpeningId === o.id} onSelect={onSelectOpening} onDelete={onDeleteOpening} />
               : <WindowSymbol key={o.id} opening={o} wall={wall} isSelected={selectedOpeningId === o.id} onSelect={onSelectOpening} onDelete={onDeleteOpening} />
-            })}
+          })}
 
           {/* Cabinets */}
           {cabinets.map(cab => {

@@ -10,14 +10,14 @@ const MATERIALEN = [
   { id: 'matte_white', name: 'Mat Wit', color: '#f7f6f2', roughness: 0.9, previewColor: '#ffffff' },
   { id: 'matte_anthracite', name: 'Mat Antraciet', color: '#383a3d', roughness: 0.8, previewColor: '#383a3d' },
   { id: 'natural_oak', name: 'Natuurlijk Eiken', color: '#bfa37a', roughness: 0.5, previewColor: '#cfa976' },
-  { id: 'smoked_oak',  name: 'Gerookt Eiken',    color: '#4e3d30', roughness: 0.6, previewColor: '#534337' },
-  { id: 'washed_oak',  name: 'Wit Geolied',      color: '#dfd5c6', roughness: 0.4, previewColor: '#e5dbcc' },
+  { id: 'smoked_oak', name: 'Gerookt Eiken', color: '#4e3d30', roughness: 0.6, previewColor: '#534337' },
+  { id: 'washed_oak', name: 'Wit Geolied', color: '#dfd5c6', roughness: 0.4, previewColor: '#e5dbcc' },
 ]
 
 const ROOM_SHAPES = [
-  { id: 'straight', label: 'Recht',  icon: '▬' },
-  { id: 'L-shape',  label: 'L-vorm', icon: '⌐' },
-  { id: 'U-shape',  label: 'U-vorm', icon: '⊓' },
+  { id: 'straight', label: 'Recht', icon: '▬' },
+  { id: 'L-shape', label: 'L-vorm', icon: '⌐' },
+  { id: 'U-shape', label: 'U-vorm', icon: '⊓' },
 ]
 
 const WALL_LABELS = { back: 'Achterwand', right: 'Rechterwand', left: 'Linkerwand' }
@@ -44,15 +44,14 @@ export default function Sidebar({
   onUpdateCabinetPos,
   floorType,
   onSelectFloorType,
-  totalPrice = 0,
 }) {
   const [activeTab, setActiveTab] = useState('room') // 'room' | 'cabinets'
 
   const visibleWalls = roomShape === 'straight'
     ? ['back']
     : roomShape === 'L-shape'
-    ? ['back', 'right']
-    : ['back', 'right', 'left']
+      ? ['back', 'right']
+      : ['back', 'right', 'left']
 
   const selectedCabinet = cabinets.find(c => c.id === selectedCabinetId)
 
@@ -527,51 +526,10 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Live Totaalprijs */}
-      <div style={{
-        margin: '0 16px 12px',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        background: 'linear-gradient(135deg, #2c1f12 0%, #4a2f18 50%, #6b3f20 100%)',
-        boxShadow: '0 4px 20px rgba(130, 98, 66, 0.35)',
-        flexShrink: 0,
-      }}>
-        <div style={{ padding: '14px 18px' }}>
-          <div style={{
-            fontSize: '9px', fontWeight: '700', letterSpacing: '1.5px',
-            textTransform: 'uppercase', color: '#c49b6d', marginBottom: '6px'
-          }}>Geschatte Totaalprijs</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span style={{
-              fontSize: '11px', fontWeight: '600', color: '#e8d4b8', lineHeight: 1
-            }}>€</span>
-            <span style={{
-              fontSize: '32px', fontWeight: '800', color: '#ffffff',
-              lineHeight: 1, letterSpacing: '-1px',
-              fontVariantNumeric: 'tabular-nums',
-              transition: 'all 0.3s ease'
-            }}>
-              {totalPrice.toLocaleString('nl-BE')}
-            </span>
-          </div>
-          <div style={{
-            marginTop: '8px', paddingTop: '8px',
-            borderTop: '1px solid rgba(196, 155, 109, 0.2)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-          }}>
-            <span style={{ fontSize: '10px', color: '#a07850' }}>
-              {cabinets.length} module{cabinets.length !== 1 ? 's' : ''} geselecteerd
-            </span>
-            <span style={{ fontSize: '9px', color: '#7a6040', fontStyle: 'italic' }}>
-              excl. BTW & plaatsing
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Footer */}
       <div className="footer-buttons">
-        <button className="btn-secondary" onClick={onReset}>Ontwerp Wissen</button>
+        <button className="btn-secondary" onClick={onReset}>Nieuw Ontwerp</button>
       </div>
     </aside>
   )

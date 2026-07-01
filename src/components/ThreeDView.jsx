@@ -740,13 +740,14 @@ export default function ThreeDView({
         <color attach="background" args={['#eae8e1']} />
 
         {/* Belichting */}
-        {/* Ambient vullicht */}
-        <ambientLight intensity={0.65} />
+        {/* Ambient vullicht en hemisphere voor uniforme belichting */}
+        <ambientLight intensity={0.9} />
+        <hemisphereLight skyColor="#ffffff" groundColor="#ffffff" intensity={0.2} />
         
-        {/* Richtingslicht (Zonlicht) met schaduwen */}
+        {/* Richtingslicht (Zonlicht) met schaduwen voor kasten en muren */}
         <directionalLight 
           position={[6, 9, 4]} 
-          intensity={1.3} 
+          intensity={0.65} 
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
@@ -758,24 +759,6 @@ export default function ThreeDView({
           shadow-bias={-0.0005}
         />
 
-        {/* Keuken spotjes (Lichtkegels op de wand) */}
-        <spotLight 
-          position={[-0.8, 2.3, 1.5]} 
-          angle={Math.PI / 6} 
-          penumbra={0.8} 
-          intensity={8} 
-          distance={4}
-          color="#fff6e0"
-        />
-        <spotLight 
-          position={[-0.8, 2.3, 3.2]} 
-          angle={Math.PI / 6} 
-          penumbra={0.8} 
-          intensity={8} 
-          distance={4}
-          color="#fff6e0"
-        />
-
         {/* Dynamische muren op basis van roomShape */}
         {walls.map(wall => {
           const cx3 = (wall.x1 + wall.x2) / 2
@@ -783,7 +766,7 @@ export default function ThreeDView({
           return (
             <mesh key={wall.id} position={[cx3, 1.25, cz3]} rotation={[0, wall.angle, 0]} receiveShadow>
               <boxGeometry args={[wall.length, 2.5, 0.1]} />
-              <meshStandardMaterial color="#dfdbd0" roughness={0.95} />
+              <meshStandardMaterial color="#ededeb" roughness={0.95} />
             </mesh>
           )
         })}
@@ -792,9 +775,9 @@ export default function ThreeDView({
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-wallDimensions.back / 2, 0, wallDimensions.right / 2]} receiveShadow>
           <planeGeometry args={[wallDimensions.back, wallDimensions.right]} />
           {floorType === 'wood' ? (
-            <meshStandardMaterial map={woodFloorTexture} roughness={0.4} />
+            <meshStandardMaterial key="wood" map={woodFloorTexture} roughness={0.4} />
           ) : (
-            <meshStandardMaterial color="#918d83" roughness={0.5} />
+            <meshStandardMaterial key="tiles" color="#918d83" roughness={0.5} />
           )}
         </mesh>
 
