@@ -85,7 +85,7 @@ export default function Sidebar({
           color: '#3b2512',
           lineHeight: 1.3,
         }}>
-          kodiak <span style={{ color: '#826242' }}>KEUKENCONFIGURATOR</span>
+          <span style={{ color: '#826242' }}>KEUKENCONFIGURATOR</span>
         </div>
         <div style={{
           fontSize: '10px',
@@ -95,7 +95,7 @@ export default function Sidebar({
           marginTop: '4px',
           lineHeight: 1.4,
         }}>
-          ontwikkeld door 2026 &copy; Kodiak HPMB
+          ontwikkeld door 2026 &copy; HPMB
         </div>
       </div>
 

@@ -50,9 +50,9 @@ body,
 }
 
 .logo-container img {
-  max-width: 80%;
+  max-width: 60%;
   height: auto;
-  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.05));
+  filter: drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.05));
 }
 
 .sidebar-content {
@@ -111,7 +111,7 @@ body,
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .material-card:hover {
@@ -128,7 +128,7 @@ body,
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  box-shadow: inset 0 0 4px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .material-name {
@@ -221,7 +221,8 @@ body,
   transition: all 0.2s ease;
 }
 
-.placed-item:hover, .placed-item.selected {
+.placed-item:hover,
+.placed-item.selected {
   border-color: #826242;
   background-color: #f7f3ec;
 }
@@ -329,7 +330,7 @@ body,
   pointer-events: none;
   font-weight: 500;
   backdrop-filter: blur(4px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   gap: 6px;

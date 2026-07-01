@@ -619,7 +619,7 @@ export default function ThreeDView({
       const centerZ = wall.z1 + centerOffset * dz
 
       const worktopThickness = 0.04
-      const worktopDepth = 0.61
+      const worktopDepth = 0.65
       const plinthHeight = 0.1
 
       const y = 0.8 + 0.1 + worktopThickness / 2
@@ -733,7 +733,7 @@ export default function ThreeDView({
     <div className="canvas-container">
       {/* 3D Canvas */}
       <Canvas 
-        camera={{ position: [-5, 4.2, 5.5], fov: 45 }}
+        camera={{ position: [-6.5, 5.5, 7.2], fov: 45 }}
         shadows
         gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
       >
