@@ -442,6 +442,9 @@ export default function TwoDView({
   onAddCabinet,
   onDeleteOpening,
   totalPrice = 0,
+  onDraggingChange,
+  showAxes = false,
+  onToggleAxes,
 }) {
   const svgRef = useRef(null)
   const [draggingId, setDraggingId] = useState(null)
@@ -504,13 +507,15 @@ export default function TwoDView({
     e.stopPropagation()
     if (!placingCabinet) {
       setDraggingId(cabId)
+      if (onDraggingChange) onDraggingChange(cabId)
       onSelectCabinet(cabId)
     }
-  }, [placingCabinet, onSelectCabinet])
+  }, [placingCabinet, onSelectCabinet, onDraggingChange])
 
   const handleMouseUp = useCallback(() => {
     setDraggingId(null)
-  }, [])
+    if (onDraggingChange) onDraggingChange(null)
+  }, [onDraggingChange])
 
   // Build wall SVG paths
   const renderWalls = () => {
@@ -578,6 +583,37 @@ export default function TwoDView({
             ◎ SNAP
           </span>
         )}
+      </div>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px', 
+        padding: '0 20px 10px', 
+        borderBottom: '1px solid #e5e2db',
+        marginBottom: '10px'
+      }}>
+        <label style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '6px', 
+          fontSize: '12px', 
+          color: '#8c887d', 
+          cursor: 'pointer',
+          fontWeight: '600',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}>
+          <input 
+            type="checkbox" 
+            checked={showAxes} 
+            onChange={onToggleAxes} 
+            style={{ 
+              cursor: 'pointer',
+              accentColor: '#826242'
+            }} 
+          />
+          Toon assen
+        </label>
       </div>
       <div className="flatplan-svg-wrapper">
         <svg

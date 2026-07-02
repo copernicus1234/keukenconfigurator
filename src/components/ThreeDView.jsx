@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, Suspense, useEffect, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Grid, ContactShadows } from '@react-three/drei'
+import { OrbitControls, Grid, ContactShadows, useGLTF, Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import { getWalls } from '../utils/geometry'
 
@@ -108,6 +108,35 @@ function createFloorTexture() {
   texture.wrapT = THREE.RepeatWrapping
   texture.repeat.set(4, 4)
   return texture
+}
+
+// Reginox Queen 60 Sink Component (GLTF model)
+function ReginoxSink({ metalMaterial }) {
+  const { scene } = useGLTF('/models/R16633_S_SST_CAD_V2202.gltf')
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+
+  useEffect(() => {
+    clonedScene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+        child.material = metalMaterial
+      }
+    })
+  }, [clonedScene, metalMaterial])
+
+  // GLTF model bounds: X 0→0.595m, Y 0→0.470m, Z 0.005→0.170m (Z-up CAD model)
+  // Rotatie [π/2, π, 0]: draai 90° om X en 180° om Y zodat de kraanlandingszijde aan de achterkant (muurzijde) zit.
+  // X-offset +0.2975: centreert de breedte op X=0 (want X is nu gespiegeld naar -u)
+  // Y-offset -0.169: trekt de spoelbak omlaag zodat de rand 1mm boven het werkblad rust (voorkomt Z-fighting)
+  // Z-offset -0.185: verschuift de bak 50mm naar voren (richting kamerzijde, blauwe Z-as) om uit te lijnen met de kraan
+  return (
+    <primitive
+      object={clonedScene}
+      rotation={[Math.PI / 2, Math.PI, 0]}
+      position={[0.2975, -0.169, -0.185]}
+    />
+  )
 }
 
 // 3D Cabinet Component
@@ -420,16 +449,19 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
 
   // Extra attributen zoals spoelbak of kookplaat
   const renderAppliances = () => {
-    if (type === 'base_sink') {
+    if (type === 'sink') {
+      // Y van bovenkant kast = height/2, werkblad zit 0.04m daarboven
+      const sinkTopY = height / 2 + 0.04
       return (
-        <group position={[0, height / 2 + 0.041, 0]}>
-          {/* Spoelbak frame */}
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[width - 0.1, 0.002, depth - 0.1]} />
-            <primitive object={metalMaterial} attach="material" />
-          </mesh>
-          {/* Kraan */}
-          <group position={[0, 0, -depth / 2 + 0.08]}>
+        <group>
+          {/* Reginox Queen 60 GLTF – geplaatst op hoogte van bovenkant werkblad */}
+          <Suspense fallback={null}>
+            <group position={[0, sinkTopY, 0]}>
+              <ReginoxSink metalMaterial={metalMaterial} />
+            </group>
+          </Suspense>
+          {/* Kraan op achterkant spoelbak (Z- = wandzijde na rotatiefixatie) */}
+          <group position={[0, sinkTopY + 0.01, -depth / 2 + 0.06]}>
             {/* Kraanvoet */}
             <mesh castShadow>
               <cylinderGeometry args={[0.01, 0.01, 0.08, 12]} />
@@ -511,6 +543,30 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
             <primitive object={woodMaterial} attach="material" />
           </mesh>
         </group>
+      ) : type === 'sink' ? (
+        // Spoelkast: U-vorm zonder bovenpaneel zodat de spoelbak erdoorheen kan zakken
+        <group>
+          {/* Bodem */}
+          <mesh position={[0, -height / 2 + 0.009, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width, 0.018, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Linkerzijwand */}
+          <mesh position={[-width / 2 + 0.009, 0, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.018, height, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Rechterzijwand */}
+          <mesh position={[width / 2 - 0.009, 0, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.018, height, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Achterwand */}
+          <mesh position={[0, 0, -depth / 2 + 0.009]} castShadow receiveShadow>
+            <boxGeometry args={[width, height, 0.018]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+        </group>
       ) : (
         <mesh castShadow receiveShadow>
           <boxGeometry args={[width, height, depth]} />
@@ -538,7 +594,19 @@ export default function ThreeDView({
   roomShape = 'L-shape',
   openings = [],
   floorType = 'wood',
+  draggingId = null,
+  showAxes = false,
 }) {
+  const axesRef = useRef()
+
+  // Zorg dat de wereld-assen altijd "bovenop" de geometrie renderen (geen Z-fighting of verdwijnen in vloer/muur)
+  useEffect(() => {
+    if (axesRef.current) {
+      axesRef.current.material.depthTest = false
+      axesRef.current.renderOrder = 999
+    }
+  }, [showAxes])
+
   const woodFloorTexture = useMemo(() => createFloorTexture(), [])
 
   // PBR-achtige materialen maken op basis van de geselecteerde houtkleur
@@ -568,16 +636,16 @@ export default function ThreeDView({
     
     // Werkblad materiaal (beton/steen look)
     const stoneMaterial = new THREE.MeshStandardMaterial({
-      color: '#4f5255',
-      roughness: 0.7,
-      metalness: 0.1
+      color: '#7a7e82',
+      roughness: 0.65,
+      metalness: 0.05
     })
 
-    // Metalen grepen en kraan materiaal (RVS/chroom)
+    // Metalen grepen en kraan materiaal (RVS/chroom – geborsteld staal)
     const metalMaterial = new THREE.MeshStandardMaterial({
-      color: '#d4d0c5',
-      roughness: 0.2,
-      metalness: 0.95
+      color: '#c8c4ba',
+      roughness: 0.25,
+      metalness: 0.80
     })
 
     return { woodMaterial, stoneMaterial, metalMaterial }
@@ -592,7 +660,9 @@ export default function ThreeDView({
 
     baseWalls.forEach(wallId => {
       const baseCabinets = cabinets.filter(
-        c => c.wall === wallId && (c.type.startsWith('base') || ['door', 'drawers', 'sink', 'corner_L'].includes(c.type))
+        c => c.wall === wallId
+          && (c.type.startsWith('base') || ['door', 'drawers', 'sink', 'corner_L'].includes(c.type))
+          && c.id !== draggingId  // sluit sleepende kast uit van werkblad-berekening
       )
       if (baseCabinets.length === 0) return
 
@@ -625,24 +695,126 @@ export default function ThreeDView({
       const y = 0.8 + 0.1 + worktopThickness / 2
       const py = plinthHeight / 2
 
-      elements.push(
-        <group 
-          key={`wt-${wallId}`} 
-          position={[centerX, 0, centerZ]} 
-          rotation={[0, wall.angle, 0]}
-        >
-          {/* Worktop */}
-          <mesh position={[0, y, worktopDepth / 2 - 0.005]} castShadow receiveShadow>
-            <boxGeometry args={[totalLen, worktopThickness, worktopDepth]} />
-            <primitive object={materials.stoneMaterial} attach="material" />
-          </mesh>
-          {/* Plinth (Front, recessed by 7cm) */}
-          <mesh position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
+      // Vind eventuele spoelkasten op deze wand
+      const sinkCabinets = baseCabinets.filter(c => c.type === 'sink')
+
+      // Bouw het blad op: één doorlopend blad per wand, maar met gaten waar spoelkasten zitten
+      // We splitsen de balk in segmenten rondom elke spoelkast
+      // Segments = opeenvolgende niet-overlappende X-stukken in wandcoördinaten
+      const wtZ = worktopDepth / 2 - 0.005
+
+      // Bouw lijst van alle X-segmenten (in wand-lokale coördinaten t.o.v. centerOffset)
+      // Vergroot gat naar 0.53m breedte en 0.41m diepte zodat de bakken erdoorheen passen
+      const holeW = 0.53  // breedte van het gat in het blad
+      const holeD = 0.41  // diepte van het gat in het blad
+
+      if (sinkCabinets.length === 0) {
+        // Geen spoelkast → gewoon één groot blad
+        elements.push(
+          <group
+            key={`wt-${wallId}`}
+            position={[centerX, 0, centerZ]}
+            rotation={[0, wall.angle, 0]}
+          >
+            <mesh position={[0, y, wtZ]} castShadow receiveShadow>
+              <boxGeometry args={[totalLen, worktopThickness, worktopDepth]} />
+              <primitive object={materials.stoneMaterial} attach="material" />
+            </mesh>
+            <mesh position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
+              <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
+              <primitive object={materials.woodMaterial} attach="material" />
+            </mesh>
+          </group>
+        )
+      } else {
+        // Met spoelkast(en): bouw segmenten rondom de gaten
+        // Alle posities zijn relatief t.o.v. centerOffset (= 0 in de group)
+        const groupMeshes = []
+        const groupKey = `wt-${wallId}`
+
+        // Bouw X-ranges van gaten (in wand-lokale coördinaten t.o.v. de group)
+        const holes = sinkCabinets.map(sc => {
+          const scLocalOffset = sc.offset - centerOffset
+          return { x0: scLocalOffset - holeW / 2, x1: scLocalOffset + holeW / 2, cab: sc }
+        })
+        holes.sort((a, b) => a.x0 - b.x0)
+
+        // Segmenten langs de lengte van het blad (X-as in wandrichting)
+        let cursor = -totalLen / 2
+        holes.forEach((hole, i) => {
+          // Stuk vóór het gat
+          if (hole.x0 > cursor + 0.001) {
+            const segW = hole.x0 - cursor
+            const segCX = cursor + segW / 2
+            groupMeshes.push(
+              <mesh key={`seg-${i}-before`} position={[segCX, y, wtZ]} castShadow receiveShadow>
+                <boxGeometry args={[segW, worktopThickness, worktopDepth]} />
+                <primitive object={materials.stoneMaterial} attach="material" />
+              </mesh>
+            )
+          }
+          // Stukken aan voor- en achterkant van het gat (langs Z-as = diepte)
+          const holeCX = hole.x0 + holeW / 2
+          const holeZCenter = 0.35
+
+          // Bereken dynamisch de diktes en posities van de voor- en achterstrook
+          // zodat ze altijd perfect aansluiten bij het hoofdwerkblad (van -0.005 tot 0.645)
+          const worktopStart = wtZ - worktopDepth / 2
+          const worktopEnd = wtZ + worktopDepth / 2
+          const holeStart = holeZCenter - holeD / 2
+          const holeEnd = holeZCenter + holeD / 2
+
+          const stripD_back = holeStart - worktopStart
+          const posZ_back = worktopStart + stripD_back / 2
+
+          const stripD_front = worktopEnd - holeEnd
+          const posZ_front = holeEnd + stripD_front / 2
+
+          groupMeshes.push(
+            <mesh key={`seg-${i}-back`} position={[holeCX, y, posZ_back]} castShadow receiveShadow>
+              <boxGeometry args={[holeW, worktopThickness, stripD_back]} />
+              <primitive object={materials.stoneMaterial} attach="material" />
+            </mesh>
+          )
+          groupMeshes.push(
+            <mesh key={`seg-${i}-front`} position={[holeCX, y, posZ_front]} castShadow receiveShadow>
+              <boxGeometry args={[holeW, worktopThickness, stripD_front]} />
+              <primitive object={materials.stoneMaterial} attach="material" />
+            </mesh>
+          )
+          cursor = hole.x1
+        })
+
+        // Stuk na het laatste gat
+        if (cursor < totalLen / 2 - 0.001) {
+          const segW = totalLen / 2 - cursor
+          const segCX = cursor + segW / 2
+          groupMeshes.push(
+            <mesh key="seg-after" position={[segCX, y, wtZ]} castShadow receiveShadow>
+              <boxGeometry args={[segW, worktopThickness, worktopDepth]} />
+              <primitive object={materials.stoneMaterial} attach="material" />
+            </mesh>
+          )
+        }
+
+        // Plint doorloopt de hele wand ononderbroken
+        groupMeshes.push(
+          <mesh key="plinth" position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
             <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
             <primitive object={materials.woodMaterial} attach="material" />
           </mesh>
-        </group>
-      )
+        )
+
+        elements.push(
+          <group
+            key={groupKey}
+            position={[centerX, 0, centerZ]}
+            rotation={[0, wall.angle, 0]}
+          >
+            {groupMeshes}
+          </group>
+        )
+      }
     })
 
     return elements.length > 0 ? <group>{elements}</group> : null
@@ -738,6 +910,12 @@ export default function ThreeDView({
         gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
       >
         <color attach="background" args={['#eae8e1']} />
+
+        {/* Wereld hulp-assen (Rood = X, Groen = Y, Blauw = Z) op [0,0,0] */}
+        {showAxes && <axesHelper ref={axesRef} args={[3.0]} />}
+
+        {/* Omgevingskaart voor correcte PBR-weergave van metalen oppervlakken */}
+        <Environment preset="apartment" />
 
         {/* Belichting */}
         {/* Ambient vullicht en hemisphere voor uniforme belichting */}

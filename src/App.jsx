@@ -21,11 +21,13 @@ export default function App() {
   const [selectedOpeningId, setSelectedOpeningId] = useState(null)
   const [selectedMaterial, setSelectedMaterial] = useState(DEFAULT_MATERIAL)
   const [floorType, setFloorType] = useState('wood') // 'tiles' | 'wood'
+  const [showAxes, setShowAxes] = useState(false) // Toggle voor 3D Wereld-assen
 
   // Placement / drag states
   const [placingCabinet, setPlacingCabinet] = useState(null) // cabinet data being placed
   const [hoveredWallId, setHoveredWallId] = useState(null)
   const [hoveredOffset, setHoveredOffset] = useState(0)
+  const [draggingId, setDraggingId] = useState(null) // id van kast die gesleept wordt
 
   // Bereken muren en transformaties dynamisch
   const walls = getWalls(roomShape, wallLengths)
@@ -166,6 +168,8 @@ export default function App() {
            hoveredWallId={hoveredWallId}
            hoveredOffset={hoveredOffset}
            floorType={floorType}
+           draggingId={draggingId}
+           showAxes={showAxes}
          />
 
 {/* 2D Plattegrond */}
@@ -187,10 +191,13 @@ export default function App() {
              setHoveredWallId(wallId)
              setHoveredOffset(offset)
            }}
+           onDraggingChange={setDraggingId}
            onDeleteCabinet={handleDeleteCabinet}
            onAddCabinet={handleAddCabinet}
            onDeleteOpening={handleDeleteOpening}
            totalPrice={totalPrice}
+           showAxes={showAxes}
+           onToggleAxes={() => setShowAxes(prev => !prev)}
          />
       </main>
     </div>
