@@ -689,6 +689,30 @@ export default function TwoDView({
             />
           )}
 
+          {/* Helper test square to demonstrate coordinate mapping */}
+          <rect
+            x={205}
+            y={100}
+            width={50}
+            height={50}
+            fill="rgba(231, 76, 60, 0.25)"
+            stroke="#e74c3c"
+            strokeWidth="2"
+            strokeDasharray="4,2"
+            rx="4"
+          />
+          <text
+            x={230}
+            y={125}
+            fill="#e74c3c"
+            fontSize="10"
+            fontWeight="bold"
+            textAnchor="middle"
+            dominantBaseline="middle"
+          >
+            50px (~70cm)
+          </text>
+
           {/* Dimension lines */}
           {renderDimensions()}
         </svg>
