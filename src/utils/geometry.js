@@ -72,7 +72,7 @@ export function getCabinetTransform(cabinet, walls) {
   // Y-as positie
   let y = 0.5 // base cabinet default (height 0.8 sits on 0.1 plinth -> center Y = 0.5)
   if (cabinet.type === 'tall') {
-    y = 1.0 // height 2.0 sits on floor -> center Y = 1.0
+    y = cabinet.height / 2 + 0.05 // carcass center is at height/2 + 0.05 (sits on 0.1m plinth)
   } else if (cabinet.type.startsWith('wall')) {
     y = 1.65 // floating wall cabinet -> center Y = 1.65 (maintains a 41cm gap above 94cm worktop)
   }

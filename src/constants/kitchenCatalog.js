@@ -66,7 +66,7 @@ export const KITCHEN_CATALOG = [
     code: 'HE101',
     name: 'Hoge kast (60cm)',
     width: 0.6,
-    height: 2.0,
+    height: 1.95,
     depth: 0.6,
     type: 'tall',
     price: 399

@@ -7,11 +7,9 @@ const BESCHIKBARE_MODULES = KITCHEN_CATALOG.map(item => ({
 }))
 
 const MATERIALEN = [
-  { id: 'matte_white', name: 'Mat Wit', color: '#f7f6f2', roughness: 0.9, previewColor: '#ffffff' },
-  { id: 'matte_anthracite', name: 'Mat Antraciet', color: '#383a3d', roughness: 0.8, previewColor: '#383a3d' },
-  { id: 'natural_oak', name: 'Natuurlijk Eiken', color: '#bfa37a', roughness: 0.5, previewColor: '#cfa976' },
-  { id: 'smoked_oak', name: 'Gerookt Eiken', color: '#4e3d30', roughness: 0.6, previewColor: '#534337' },
-  { id: 'washed_oak', name: 'Wit Geolied', color: '#dfd5c6', roughness: 0.4, previewColor: '#e5dbcc' },
+  { id: 'neutral_grey', name: 'Neutraal (Lichtgrijs)', color: '#deded9', roughness: 0.95, previewColor: '#deded9' },
+  { id: 'natural_oak', name: 'Natuurlijk Eiken', color: '#bfa37a', roughness: 0.85, previewColor: '#cfa976' },
+  { id: 'smoked_oak', name: 'Gerookt Eiken', color: '#4e3d30', roughness: 0.85, previewColor: '#534337' },
 ]
 
 const ROOM_SHAPES = [

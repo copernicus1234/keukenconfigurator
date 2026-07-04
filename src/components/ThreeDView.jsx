@@ -1,8 +1,27 @@
 import { useMemo, Suspense, useEffect, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Grid, ContactShadows, useGLTF, Environment } from '@react-three/drei'
 import * as THREE from 'three'
 import { getWalls } from '../utils/geometry'
+
+// Een lichtbron die met de camera meebeweegt (headlight)
+function CameraLight() {
+  const lightRef = useRef()
+  useFrame(({ camera }) => {
+    if (lightRef.current) {
+      lightRef.current.position.copy(camera.position)
+    }
+  })
+  return (
+    <pointLight 
+      ref={lightRef} 
+      intensity={0.20} 
+      decay={0}
+      distance={0}
+      castShadow={false} 
+    />
+  )
+}
 
 // Helper om ter plekke een eikenhout PBR-achtige textuur te genereren
 function createWoodTexture(baseColorHex, grainColorHex) {
@@ -52,6 +71,7 @@ function createWoodTexture(baseColorHex, grainColorHex) {
   }
   
   const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
   texture.repeat.set(1, 4) // Rek de nerf uit in de lengte voor een realistisch paneel
@@ -104,6 +124,7 @@ function createFloorTexture() {
   }
   
   const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
   texture.repeat.set(4, 4)
@@ -160,26 +181,27 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       const lowerDoorH = 0.72
       const upperDoorH = height - lowerDoorH - gap - 0.1 // plinth is 10cm
       const gripLen = width * 0.55
+      const carcassHalfH = (height - 0.1) / 2
       return (
-        <group position={[0, 0.05, depth / 2 + frontDepth / 2]}>
+        <group position={[0, 0, depth / 2 + frontDepth / 2]}>
           {/* Onderste front */}
-          <mesh position={[0, -height / 2 + 0.1 + lowerDoorH / 2, 0]}>
+          <mesh position={[0, -carcassHalfH + lowerDoorH / 2, 0]}>
             <boxGeometry args={[width - gap, lowerDoorH, frontDepth]} />
             <primitive object={woodMaterial} attach="material" />
           </mesh>
           {/* Horizontale greep onderdeur */}
-          <mesh position={[0, -height / 2 + 0.1 + lowerDoorH - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh position={[0, -carcassHalfH + lowerDoorH - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
             <primitive object={metalMaterial} attach="material" />
           </mesh>
 
           {/* Bovenste front */}
-          <mesh position={[0, -height / 2 + 0.1 + lowerDoorH + gap + upperDoorH / 2, 0]}>
+          <mesh position={[0, -carcassHalfH + lowerDoorH + gap + upperDoorH / 2, 0]}>
             <boxGeometry args={[width - gap, upperDoorH - gap, frontDepth]} />
             <primitive object={woodMaterial} attach="material" />
           </mesh>
           {/* Horizontale greep bovendeur */}
-          <mesh position={[0, -height / 2 + 0.1 + lowerDoorH + gap + 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh position={[0, -carcassHalfH + lowerDoorH + gap + 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
             <primitive object={metalMaterial} attach="material" />
           </mesh>
@@ -283,12 +305,12 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
             <primitive object={woodMaterial} attach="material" />
           </mesh>
           {/* Handle 1 (Door 1) */}
-          <mesh position={[xSign * 0.175, height / 2 - 0.08, -0.1 + frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh position={[xSign * 0.175, -height / 2 + 0.07, -0.1 + frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.006, 0.006, 0.14, 8]} />
             <primitive object={metalMaterial} attach="material" />
           </mesh>
           {/* Handle 2 (Door 2) */}
-          <mesh position={[-xSign * (0.1 - frontDepth - 0.012), height / 2 - 0.08, 0.175]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh position={[-xSign * (0.1 - frontDepth - 0.012), -height / 2 + 0.07, 0.175]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.006, 0.006, 0.14, 8]} />
             <primitive object={metalMaterial} attach="material" />
           </mesh>
@@ -611,6 +633,19 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
             <primitive object={woodMaterial} attach="material" />
           </mesh>
         </group>
+      ) : type === 'tall' ? (
+        <group>
+          {/* Carcass */}
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[width, height - 0.1, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Plint */}
+          <mesh position={[0, -(height - 0.1) / 2 - 0.05, depth / 2 - 0.07 - 0.01]} castShadow receiveShadow>
+            <boxGeometry args={[width, 0.1, 0.02]} />
+            <meshStandardMaterial color="#404040" roughness={0.8} metalness={0.1} />
+          </mesh>
+        </group>
       ) : (
         <mesh castShadow receiveShadow>
           <boxGeometry args={[width, height, depth]} />
@@ -680,7 +715,7 @@ export default function ThreeDView({
     
     // Werkblad materiaal (beton/steen look)
     const stoneMaterial = new THREE.MeshStandardMaterial({
-      color: '#7a7e82',
+      color: '#404347',
       roughness: 0.65,
       metalness: 0.05
     })
@@ -838,7 +873,7 @@ export default function ThreeDView({
               </mesh>
               <mesh position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
                 <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
-                <primitive object={materials.woodMaterial} attach="material" />
+                <meshStandardMaterial color="#404040" roughness={0.8} metalness={0.1} />
               </mesh>
             </group>
           )
@@ -851,7 +886,8 @@ export default function ThreeDView({
           const holeD = 0.41  // diepte van het gat in het blad
 
           const holes = sinkCabinets.map(sc => {
-            const scLocalOffset = sc.offset - centerOffset
+            const alignFactor = dx * Math.cos(wall.angle) - dz * Math.sin(wall.angle)
+            const scLocalOffset = (sc.offset - centerOffset) * alignFactor
             return { x0: scLocalOffset - holeW / 2, x1: scLocalOffset + holeW / 2, cab: sc }
           })
           holes.sort((a, b) => a.x0 - b.x0)
@@ -915,7 +951,7 @@ export default function ThreeDView({
           groupMeshes.push(
             <mesh key="plinth" position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
               <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
-              <primitive object={materials.woodMaterial} attach="material" />
+              <meshStandardMaterial color="#404040" roughness={0.8} metalness={0.1} />
             </mesh>
           )
 
@@ -1022,28 +1058,31 @@ export default function ThreeDView({
       <Canvas 
         camera={{ position: [-6.5, 5.5, 7.2], fov: 45 }}
         shadows
-        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
+        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.70 }}
       >
-        <color attach="background" args={['#eae8e1']} />
+        <color attach="background" args={['#ffffff']} />
 
         {/* Wereld hulp-assen (Rood = X, Groen = Y, Blauw = Z) op [0,0,0] */}
         {showAxes && <axesHelper ref={axesRef} args={[3.0]} />}
 
         {/* Omgevingskaart voor correcte PBR-weergave van metalen oppervlakken */}
-        <Environment preset="apartment" />
+        <Environment preset="studio" />
 
         {/* Belichting */}
         {/* Ambient vullicht en hemisphere voor uniforme belichting */}
-        <ambientLight intensity={0.9} />
-        <hemisphereLight skyColor="#ffffff" groundColor="#ffffff" intensity={0.2} />
+        <ambientLight intensity={0.10} />
+        <hemisphereLight skyColor="#ffffff" groundColor="#ebdcb0" intensity={0.02} />
         
-        {/* Richtingslicht (Zonlicht) met schaduwen voor kasten en muren */}
+        {/* Lichtbron die meebeweegt met de camera (headlight) voor egale belichting van alle kijkhoeken */}
+        <CameraLight />
+
+        {/* Een zacht, statisch zonlicht voor de schaduwen op de muur en dieptewerking */}
         <directionalLight 
-          position={[6, 9, 4]} 
-          intensity={0.65} 
+          position={[2.5, 8, 2.5]} 
+          intensity={0.15} 
           castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
           shadow-camera-far={25}
           shadow-camera-left={-6}
           shadow-camera-right={6}
@@ -1059,7 +1098,7 @@ export default function ThreeDView({
           return (
             <mesh key={wall.id} position={[cx3, 1.25, cz3]} rotation={[0, wall.angle, 0]} receiveShadow>
               <boxGeometry args={[wall.length, 2.5, 0.1]} />
-              <meshStandardMaterial color="#ededeb" roughness={0.95} />
+              <meshStandardMaterial color="#d2d2cc" roughness={0.95} />
             </mesh>
           )
         })}
