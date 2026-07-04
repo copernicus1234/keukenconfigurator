@@ -60,7 +60,7 @@ export default function Sidebar({
       {/* Logo */}
       <div className="logo-container">
         <img
-          src="/logo totaal met contourbeer-200 5pts.svg"
+          src="/logoNovia3.svg"
           alt="Kodiak Interieurs"
           onError={(e) => {
             e.target.style.display = 'none'

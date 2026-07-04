@@ -153,7 +153,8 @@ export function getSnappedOffsetWithLength(
   openings,
   cabWidth,
   excludeId = null,
-  snapDistance = 0.20
+  snapDistance = 0.20,
+  isWallCab = false
 ) {
   const snapPoints = []
 
@@ -162,7 +163,7 @@ export function getSnappedOffsetWithLength(
   snapPoints.push({ val: wallLength - cabWidth / 2, desc: 'Wand einde' })
 
   // 2. Snaps naar zijkanten van bestaande kasten op dezelfde wand en in dezelfde laag (base/wall)
-  const isNewWallCab = cabinets.find(c => c.id === excludeId)?.type.startsWith('wall') || false
+  const isNewWallCab = isWallCab || (excludeId ? (cabinets.find(c => c.id === excludeId)?.type.startsWith('wall') || false) : false)
   
   const sameWallCabs = cabinets.filter(c => 
     c.wall === targetWallId && 
@@ -185,10 +186,10 @@ export function getSnappedOffsetWithLength(
     })
   })
 
-  // 3. Snaps voor hoekkasten op aangrenzende muren (alleen voor onderkasten)
-  if (!isNewWallCab) {
-    cabinets.forEach(c => {
-      if (c.id !== excludeId && c.type === 'corner_L') {
+  // 3. Snaps voor hoekkasten op aangrenzende muren (zowel onderkasten als bovenkasten)
+  cabinets.forEach(c => {
+    if (c.id !== excludeId) {
+      if (!isNewWallCab && c.type === 'corner_L') {
         // Corner back-right (meeting of back and right walls at offset 0)
         if (
           (c.wall === 'back' && Math.abs(c.offset - 0.45) < 0.05 && targetWallId === 'right') ||
@@ -200,9 +201,8 @@ export function getSnappedOffsetWithLength(
           })
         }
         
-        // Corner back-left (meeting of back wall at its end and left wall at offset 0)
+        // Corner back-left
         if (c.wall === 'back' && targetWallId === 'left') {
-          // If the corner cabinet on the back wall is on the left side (offset is large)
           if (c.offset > 1.5) {
             snapPoints.push({
               val: 0.9 + cabWidth / 2,
@@ -216,9 +216,37 @@ export function getSnappedOffsetWithLength(
             desc: 'Aansluiten op hoekkast (hoek)'
           })
         }
+      } else if (isNewWallCab && c.type === 'wall_corner_L') {
+        // Hoekbovenkast (90x90cm)
+        // Corner back-right (meeting of back and right walls at offset 0)
+        if (
+          (c.wall === 'back' && Math.abs(c.offset - 0.45) < 0.05 && targetWallId === 'right') ||
+          (c.wall === 'right' && Math.abs(c.offset - 0.45) < 0.05 && targetWallId === 'back')
+        ) {
+          snapPoints.push({
+            val: 0.9 + cabWidth / 2,
+            desc: 'Aansluiten op hoekbovenkast (hoek)'
+          })
+        }
+        
+        // Corner back-left
+        if (c.wall === 'back' && targetWallId === 'left') {
+          if (c.offset > 1.5) {
+            snapPoints.push({
+              val: 0.9 + cabWidth / 2,
+              desc: 'Aansluiten op hoekbovenkast (hoek)'
+            })
+          }
+        }
+        if (c.wall === 'left' && Math.abs(c.offset - 0.45) < 0.05 && targetWallId === 'back') {
+          snapPoints.push({
+            val: wallLength - 0.9 - cabWidth / 2,
+            desc: 'Aansluiten op hoekbovenkast (hoek)'
+          })
+        }
       }
-    })
-  }
+    }
+  })
 
   // Zoek naar de dichtstbijzijnde snap point
   let bestSnap = null

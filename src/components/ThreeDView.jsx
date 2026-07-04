@@ -238,27 +238,57 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
 
     // Hoekonderkast (Corner cabinet)
     if (resolvedType === 'corner_L') {
-      const isLeftCorner = !(cabinet.wall === 'back' && cabinet.offset > 1.5)
+      const isLeftCorner = cabinet.wall === 'back' ? cabinet.offset <= 1.5 : cabinet.wall === 'left'
       const xSign = isLeftCorner ? -1 : 1
       return (
         <group>
           {/* Door 1 (facing forward) */}
-          <mesh position={[xSign * 0.3, 0, 0.45 + frontDepth / 2]} castShadow>
+          <mesh position={[xSign * 0.3, 0, 0.15 + frontDepth / 2]} castShadow>
             <boxGeometry args={[0.3 - gap, height - gap, frontDepth]} />
             <primitive object={woodMaterial} attach="material" />
           </mesh>
           {/* Door 2 (facing sideways) */}
-          <mesh position={[xSign * (0.15 - frontDepth / 2), 0, 0.3]} castShadow>
+          <mesh position={[xSign * (0.15 + frontDepth / 2), 0, 0.3]} castShadow>
             <boxGeometry args={[frontDepth, height - gap, 0.3 - gap]} />
             <primitive object={woodMaterial} attach="material" />
           </mesh>
           {/* Horizontale greep deur 1 */}
-          <mesh position={[xSign * 0.3, height / 2 - 0.08, 0.45 + frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh position={[xSign * 0.3, height / 2 - 0.08, 0.15 + frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]}>
             <cylinderGeometry args={[0.006, 0.006, 0.14, 8]} />
             <primitive object={metalMaterial} attach="material" />
           </mesh>
-          {/* Verticale greep deur 2 */}
-          <mesh position={[xSign * (0.15 - frontDepth - 0.012), height / 2 - 0.08, 0.3]}>
+          {/* Horizontale greep deur 2 */}
+          <mesh position={[xSign * (0.15 + frontDepth + 0.012), height / 2 - 0.08, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.006, 0.006, 0.14, 8]} />
+            <primitive object={metalMaterial} attach="material" />
+          </mesh>
+        </group>
+      )
+    }
+
+    // Hoekbovenkast (Corner wall cabinet)
+    if (resolvedType === 'wall_corner_L') {
+      const isLeftCorner = cabinet.wall === 'back' ? cabinet.offset <= 1.5 : cabinet.wall === 'left'
+      const xSign = isLeftCorner ? -1 : 1
+      return (
+        <group>
+          {/* Door 1 (facing forward) */}
+          <mesh position={[xSign * 0.175, 0, -0.1 + frontDepth / 2]} castShadow>
+            <boxGeometry args={[0.55 - gap, height - gap, frontDepth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Door 2 (facing sideways) */}
+          <mesh position={[-xSign * (0.1 - frontDepth / 2), 0, 0.175]} castShadow>
+            <boxGeometry args={[frontDepth, height - gap, 0.55 - gap]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Handle 1 (Door 1) */}
+          <mesh position={[xSign * 0.175, height / 2 - 0.08, -0.1 + frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.006, 0.006, 0.14, 8]} />
+            <primitive object={metalMaterial} attach="material" />
+          </mesh>
+          {/* Handle 2 (Door 2) */}
+          <mesh position={[-xSign * (0.1 - frontDepth - 0.012), height / 2 - 0.08, 0.175]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.006, 0.006, 0.14, 8]} />
             <primitive object={metalMaterial} attach="material" />
           </mesh>
@@ -512,7 +542,8 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
   // Roteer en positioneer de kast op basis van de wand
   const groupRotation = [0, cabinet.rotation || 0, 0]
 
-  const isCorner = type === 'corner_L'
+  const isCorner = type === 'corner_L' || type === 'wall_corner_L'
+  const isLeftCorner = cabinet.wall === 'back' ? cabinet.offset <= 1.5 : cabinet.wall === 'left'
 
   return (
     <group 
@@ -532,14 +563,27 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       )}
 
       {/* Main Cabinet Carcass (de body) */}
-      {isCorner ? (
+      {type === 'wall_corner_L' ? (
+        <group>
+          {/* Back block: width 0.9, depth 0.35 */}
+          <mesh position={[0, 0, -0.275]} castShadow receiveShadow>
+            <boxGeometry args={[0.9, height, 0.35]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Extension block: width 0.35, depth 0.55 */}
+          <mesh position={[isLeftCorner ? 0.275 : -0.275, 0, 0.175]} castShadow receiveShadow>
+            <boxGeometry args={[0.35, height, 0.55]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+        </group>
+      ) : isCorner ? (
         <group>
           <mesh position={[0, 0, -0.15]} castShadow receiveShadow>
             <boxGeometry args={[width, height, 0.6]} />
             <primitive object={woodMaterial} attach="material" />
           </mesh>
-          <mesh position={[cabinet.offset > 1.5 ? -0.3 : 0.3, 0, 0.3]} castShadow receiveShadow>
-            <boxGeometry args={[0.3, height, 0.3]} />
+          <mesh position={[isLeftCorner ? 0.15 : -0.15, 0, 0.3]} castShadow receiveShadow>
+            <boxGeometry args={[0.6, height, 0.3]} />
             <primitive object={woodMaterial} attach="material" />
           </mesh>
         </group>
@@ -659,34 +703,77 @@ export default function ThreeDView({
     const elements = []
 
     baseWalls.forEach(wallId => {
-      const baseCabinets = cabinets.filter(
+      // Begin met kasten die direct op deze muur staan
+      let baseCabinets = cabinets.filter(
         c => c.wall === wallId
           && (c.type.startsWith('base') || ['door', 'drawers', 'sink', 'corner_L'].includes(c.type))
           && c.id !== draggingId  // sluit sleepende kast uit van werkblad-berekening
       )
-      if (baseCabinets.length === 0) return
 
-      const wall = walls.find(w => w.id === wallId)
-      if (!wall) return
+      let wall = walls.find(w => w.id === wallId)
+      if (!wall) {
+        if (wallId === 'right') {
+          wall = {
+            id: 'right',
+            x1: 0,
+            z1: 0,
+            x2: 0,
+            z2: wallDimensions.right || 3.0,
+            normalX: -1,
+            normalZ: 0,
+            angle: -Math.PI / 2,
+            length: wallDimensions.right || 3.0
+          }
+        } else if (wallId === 'left') {
+          wall = {
+            id: 'left',
+            x1: -wallDimensions.back,
+            z1: 0,
+            x2: -wallDimensions.back,
+            z2: wallDimensions.left || 3.0,
+            normalX: 1,
+            normalZ: 0,
+            angle: Math.PI / 2,
+            length: wallDimensions.left || 3.0
+          }
+        }
+      }
 
-      // Bereken de exacte uiterste grenzen van de kastenrun
-      let minOffset = Infinity
-      let maxOffset = -Infinity
-      baseCabinets.forEach(c => {
-        const start = c.offset - c.width / 2
-        const end = c.offset + c.width / 2
-        if (start < minOffset) minOffset = start
-        if (end > maxOffset) maxOffset = end
+      // Voeg virtuele hoekkasten toe van aangrenzende muren die deze muur raken
+      cabinets.forEach(c => {
+        if (c.type === 'corner_L' && c.id !== draggingId) {
+          if (wallId === 'back') {
+            // Hoekkast op right/left wand raakt ook de back wand als offset <= 0.5
+            if ((c.wall === 'right' || c.wall === 'left') && c.offset <= 0.5) {
+              if (!baseCabinets.some(existing => existing.id === c.id)) {
+                const backOffset = c.wall === 'right' ? 0.45 : (wall ? wall.length - 0.45 : 3.55)
+                baseCabinets.push({ ...c, wall: 'back', offset: backOffset, width: 0.9 })
+              }
+            }
+          } else if (wallId === 'right') {
+            // Hoekkast op back wand raakt right wand als offset <= 0.5
+            if (c.wall === 'back' && c.offset <= 0.5) {
+              if (!baseCabinets.some(existing => existing.id === c.id)) {
+                baseCabinets.push({ ...c, wall: 'right', offset: 0.45, width: 0.9 })
+              }
+            }
+          } else if (wallId === 'left') {
+            // Hoekkast op back wand raakt left wand als offset >= wall.length - 0.5
+            const backLength = wallDimensions.back || 4.0
+            if (c.wall === 'back' && c.offset >= backLength - 0.5) {
+              if (!baseCabinets.some(existing => existing.id === c.id)) {
+                baseCabinets.push({ ...c, wall: 'left', offset: 0.45, width: 0.9 })
+              }
+            }
+          }
+        }
       })
 
-      const totalLen = maxOffset - minOffset
-      const centerOffset = (minOffset + maxOffset) / 2
+      if (baseCabinets.length === 0) return
+      if (!wall) return
 
       const dx = (wall.x2 - wall.x1) / wall.length
       const dz = (wall.z2 - wall.z1) / wall.length
-
-      const centerX = wall.x1 + centerOffset * dx
-      const centerZ = wall.z1 + centerOffset * dz
 
       const worktopThickness = 0.04
       const worktopDepth = 0.65
@@ -694,127 +781,155 @@ export default function ThreeDView({
 
       const y = 0.8 + 0.1 + worktopThickness / 2
       const py = plinthHeight / 2
-
-      // Vind eventuele spoelkasten op deze wand
-      const sinkCabinets = baseCabinets.filter(c => c.type === 'sink')
-
-      // Bouw het blad op: één doorlopend blad per wand, maar met gaten waar spoelkasten zitten
-      // We splitsen de balk in segmenten rondom elke spoelkast
-      // Segments = opeenvolgende niet-overlappende X-stukken in wandcoördinaten
       const wtZ = worktopDepth / 2 - 0.005
 
-      // Bouw lijst van alle X-segmenten (in wand-lokale coördinaten t.o.v. centerOffset)
-      // Vergroot gat naar 0.53m breedte en 0.41m diepte zodat de bakken erdoorheen passen
-      const holeW = 0.53  // breedte van het gat in het blad
-      const holeD = 0.41  // diepte van het gat in het blad
+      // Sorteer kasten op offset
+      const sortedCabs = [...baseCabinets].sort((a, b) => a.offset - b.offset)
+      const groups = []
+      let currentGroup = [sortedCabs[0]]
 
-      if (sinkCabinets.length === 0) {
-        // Geen spoelkast → gewoon één groot blad
-        elements.push(
-          <group
-            key={`wt-${wallId}`}
-            position={[centerX, 0, centerZ]}
-            rotation={[0, wall.angle, 0]}
-          >
-            <mesh position={[0, y, wtZ]} castShadow receiveShadow>
-              <boxGeometry args={[totalLen, worktopThickness, worktopDepth]} />
-              <primitive object={materials.stoneMaterial} attach="material" />
-            </mesh>
-            <mesh position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
-              <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
-              <primitive object={materials.woodMaterial} attach="material" />
-            </mesh>
-          </group>
-        )
-      } else {
-        // Met spoelkast(en): bouw segmenten rondom de gaten
-        // Alle posities zijn relatief t.o.v. centerOffset (= 0 in de group)
-        const groupMeshes = []
-        const groupKey = `wt-${wallId}`
+      // Groepeer aangrenzende kasten (tolerantiegrens van 5 cm)
+      for (let i = 1; i < sortedCabs.length; i++) {
+        const lastCabinet = currentGroup[currentGroup.length - 1]
+        const currentCabinet = sortedCabs[i]
+        const lastEnd = lastCabinet.offset + lastCabinet.width / 2
+        const currentStart = currentCabinet.offset - currentCabinet.width / 2
 
-        // Bouw X-ranges van gaten (in wand-lokale coördinaten t.o.v. de group)
-        const holes = sinkCabinets.map(sc => {
-          const scLocalOffset = sc.offset - centerOffset
-          return { x0: scLocalOffset - holeW / 2, x1: scLocalOffset + holeW / 2, cab: sc }
+        if (currentStart <= lastEnd + 0.05) {
+          currentGroup.push(currentCabinet)
+        } else {
+          groups.push(currentGroup)
+          currentGroup = [currentCabinet]
+        }
+      }
+      groups.push(currentGroup)
+
+      // Teken werkbladen en plinten per aaneengesloten groep
+      groups.forEach((group, groupIdx) => {
+        let minOffset = Infinity
+        let maxOffset = -Infinity
+        group.forEach(c => {
+          const start = c.offset - c.width / 2
+          const end = c.offset + c.width / 2
+          if (start < minOffset) minOffset = start
+          if (end > maxOffset) maxOffset = end
         })
-        holes.sort((a, b) => a.x0 - b.x0)
 
-        // Segmenten langs de lengte van het blad (X-as in wandrichting)
-        let cursor = -totalLen / 2
-        holes.forEach((hole, i) => {
-          // Stuk vóór het gat
-          if (hole.x0 > cursor + 0.001) {
-            const segW = hole.x0 - cursor
+        const totalLen = maxOffset - minOffset
+        const centerOffset = (minOffset + maxOffset) / 2
+
+        const centerX = wall.x1 + centerOffset * dx
+        const centerZ = wall.z1 + centerOffset * dz
+
+        // Vind eventuele spoelkasten in deze specifieke groep
+        const sinkCabinets = group.filter(c => c.type === 'sink')
+
+        if (sinkCabinets.length === 0) {
+          // Geen spoelkast in deze groep → gewoon één doorlopend blad
+          elements.push(
+            <group
+              key={`wt-${wallId}-${groupIdx}`}
+              position={[centerX, 0, centerZ]}
+              rotation={[0, wall.angle, 0]}
+            >
+              <mesh position={[0, y, wtZ]} castShadow receiveShadow>
+                <boxGeometry args={[totalLen, worktopThickness, worktopDepth]} />
+                <primitive object={materials.stoneMaterial} attach="material" />
+              </mesh>
+              <mesh position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
+                <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
+                <primitive object={materials.woodMaterial} attach="material" />
+              </mesh>
+            </group>
+          )
+        } else {
+          // Met spoelkast(en) in deze groep: bouw segmenten rondom de gaten
+          const groupMeshes = []
+          const groupKey = `wt-${wallId}-${groupIdx}`
+
+          const holeW = 0.53  // breedte van het gat in het blad
+          const holeD = 0.41  // diepte van het gat in het blad
+
+          const holes = sinkCabinets.map(sc => {
+            const scLocalOffset = sc.offset - centerOffset
+            return { x0: scLocalOffset - holeW / 2, x1: scLocalOffset + holeW / 2, cab: sc }
+          })
+          holes.sort((a, b) => a.x0 - b.x0)
+
+          let cursor = -totalLen / 2
+          holes.forEach((hole, i) => {
+            // Stuk vóór het gat
+            if (hole.x0 > cursor + 0.001) {
+              const segW = hole.x0 - cursor
+              const segCX = cursor + segW / 2
+              groupMeshes.push(
+                <mesh key={`seg-${i}-before`} position={[segCX, y, wtZ]} castShadow receiveShadow>
+                  <boxGeometry args={[segW, worktopThickness, worktopDepth]} />
+                  <primitive object={materials.stoneMaterial} attach="material" />
+                </mesh>
+              )
+            }
+            // Stukken aan voor- en achterkant van het gat
+            const holeCX = hole.x0 + holeW / 2
+            const holeZCenter = 0.35
+
+            const worktopStart = wtZ - worktopDepth / 2
+            const worktopEnd = wtZ + worktopDepth / 2
+            const holeStart = holeZCenter - holeD / 2
+            const holeEnd = holeZCenter + holeD / 2
+
+            const stripD_back = holeStart - worktopStart
+            const posZ_back = worktopStart + stripD_back / 2
+
+            const stripD_front = worktopEnd - holeEnd
+            const posZ_front = holeEnd + stripD_front / 2
+
+            groupMeshes.push(
+              <mesh key={`seg-${i}-back`} position={[holeCX, y, posZ_back]} castShadow receiveShadow>
+                <boxGeometry args={[holeW, worktopThickness, stripD_back]} />
+                <primitive object={materials.stoneMaterial} attach="material" />
+              </mesh>
+            )
+            groupMeshes.push(
+              <mesh key={`seg-${i}-front`} position={[holeCX, y, posZ_front]} castShadow receiveShadow>
+                <boxGeometry args={[holeW, worktopThickness, stripD_front]} />
+                <primitive object={materials.stoneMaterial} attach="material" />
+              </mesh>
+            )
+            cursor = hole.x1
+          })
+
+          // Stuk na het laatste gat
+          if (cursor < totalLen / 2 - 0.001) {
+            const segW = totalLen / 2 - cursor
             const segCX = cursor + segW / 2
             groupMeshes.push(
-              <mesh key={`seg-${i}-before`} position={[segCX, y, wtZ]} castShadow receiveShadow>
+              <mesh key="seg-after" position={[segCX, y, wtZ]} castShadow receiveShadow>
                 <boxGeometry args={[segW, worktopThickness, worktopDepth]} />
                 <primitive object={materials.stoneMaterial} attach="material" />
               </mesh>
             )
           }
-          // Stukken aan voor- en achterkant van het gat (langs Z-as = diepte)
-          const holeCX = hole.x0 + holeW / 2
-          const holeZCenter = 0.35
 
-          // Bereken dynamisch de diktes en posities van de voor- en achterstrook
-          // zodat ze altijd perfect aansluiten bij het hoofdwerkblad (van -0.005 tot 0.645)
-          const worktopStart = wtZ - worktopDepth / 2
-          const worktopEnd = wtZ + worktopDepth / 2
-          const holeStart = holeZCenter - holeD / 2
-          const holeEnd = holeZCenter + holeD / 2
-
-          const stripD_back = holeStart - worktopStart
-          const posZ_back = worktopStart + stripD_back / 2
-
-          const stripD_front = worktopEnd - holeEnd
-          const posZ_front = holeEnd + stripD_front / 2
-
+          // Plint doorloopt de hele groep ononderbroken
           groupMeshes.push(
-            <mesh key={`seg-${i}-back`} position={[holeCX, y, posZ_back]} castShadow receiveShadow>
-              <boxGeometry args={[holeW, worktopThickness, stripD_back]} />
-              <primitive object={materials.stoneMaterial} attach="material" />
+            <mesh key="plinth" position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
+              <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
+              <primitive object={materials.woodMaterial} attach="material" />
             </mesh>
           )
-          groupMeshes.push(
-            <mesh key={`seg-${i}-front`} position={[holeCX, y, posZ_front]} castShadow receiveShadow>
-              <boxGeometry args={[holeW, worktopThickness, stripD_front]} />
-              <primitive object={materials.stoneMaterial} attach="material" />
-            </mesh>
-          )
-          cursor = hole.x1
-        })
 
-        // Stuk na het laatste gat
-        if (cursor < totalLen / 2 - 0.001) {
-          const segW = totalLen / 2 - cursor
-          const segCX = cursor + segW / 2
-          groupMeshes.push(
-            <mesh key="seg-after" position={[segCX, y, wtZ]} castShadow receiveShadow>
-              <boxGeometry args={[segW, worktopThickness, worktopDepth]} />
-              <primitive object={materials.stoneMaterial} attach="material" />
-            </mesh>
+          elements.push(
+            <group
+              key={groupKey}
+              position={[centerX, 0, centerZ]}
+              rotation={[0, wall.angle, 0]}
+            >
+              {groupMeshes}
+            </group>
           )
         }
-
-        // Plint doorloopt de hele wand ononderbroken
-        groupMeshes.push(
-          <mesh key="plinth" position={[0, py, 0.60 - 0.07 - 0.01]} castShadow receiveShadow>
-            <boxGeometry args={[totalLen, plinthHeight, 0.02]} />
-            <primitive object={materials.woodMaterial} attach="material" />
-          </mesh>
-        )
-
-        elements.push(
-          <group
-            key={groupKey}
-            position={[centerX, 0, centerZ]}
-            rotation={[0, wall.angle, 0]}
-          >
-            {groupMeshes}
-          </group>
-        )
-      }
+      })
     })
 
     return elements.length > 0 ? <group>{elements}</group> : null

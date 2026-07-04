@@ -79,5 +79,14 @@ export const KITCHEN_CATALOG = [
     depth: 0.35,
     type: 'wall',
     price: 179
+  },
+  {
+    code: 'WE401',
+    name: 'Hoekbovenkast (90x90cm)',
+    width: 0.9,
+    height: 0.6,
+    depth: 0.9,
+    type: 'wall_corner_L',
+    price: 249
   }
 ]

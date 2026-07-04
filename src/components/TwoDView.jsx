@@ -51,7 +51,7 @@ function DimLine({ x1, y1, x2, y2, label, offset = 20, vertical = false }) {
 // Draw a cabinet rectangle in SVG given wall geometry and offset
 function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCabinet }) {
   const isWallCab = cab.type.startsWith('wall')
-  const isCorner = cab.type === 'corner_L'
+  const isCorner = cab.type === 'corner_L' || cab.type === 'wall_corner_L'
   const widthPx = cab.width * SCALE
   const depthPx = (isWallCab ? 0.35 : cab.depth) * SCALE
 
@@ -69,28 +69,34 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
   let ly = 0
 
   if (isCorner) {
-    const isLeftCorner = !(cab.wall === 'back' && cab.offset > wall.length / 2)
+    const isLeftCorner = cab.wall !== 'back' || cab.offset <= wall.length / 2
+    const size = cab.width || 0.9
+    const edge = cab.type === 'wall_corner_L' ? 0.35 : 0.6
+    const halfS = size / 2
+    const offsetDiff = edge - halfS
+    const cutStart = edge - halfS
+
     const localPts = isLeftCorner
       ? [
-        [-0.45, -0.45],
-        [0.45, -0.45],
-        [0.45, 0.15],
-        [0.15, 0.15],
-        [0.15, 0.45],
-        [-0.45, 0.45]
+        [-halfS, -halfS],
+        [halfS, -halfS],
+        [halfS, offsetDiff],
+        [cutStart, offsetDiff],
+        [cutStart, halfS],
+        [-halfS, halfS]
       ]
       : [
-        [0.45, -0.45],
-        [-0.45, -0.45],
-        [-0.45, 0.15],
-        [-0.15, 0.15],
-        [-0.15, 0.45],
-        [0.45, 0.45]
+        [halfS, -halfS],
+        [-halfS, -halfS],
+        [-halfS, offsetDiff],
+        [-cutStart, offsetDiff],
+        [-cutStart, halfS],
+        [halfS, halfS]
       ]
 
     const worldPts = localPts.map(([localX, localZ]) => {
-      const wx = wall.x1 + (cab.offset + localX) * dsx + (localZ + 0.45) * wall.normalX
-      const wz = wall.z1 + (cab.offset + localX) * dsz + (localZ + 0.45) * wall.normalZ
+      const wx = wall.x1 + (cab.offset + localX) * dsx + (localZ + halfS) * wall.normalX
+      const wz = wall.z1 + (cab.offset + localX) * dsz + (localZ + halfS) * wall.normalZ
       return toSvg(wx, wz)
     })
 
@@ -166,11 +172,14 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
   const handleColor = isSelected ? '#826242' : '#8c887d'
 
   if (isCorner) {
-    const isLeftCorner = !(cab.wall === 'back' && cab.offset > wall.length / 2)
-    const hx_local = isLeftCorner ? 0.15 : -0.15
-    const hz_local = 0.15
-    const hwx = wall.x1 + (cab.offset + hx_local) * dsx + (hz_local + 0.45) * wall.normalX
-    const hwz = wall.z1 + (cab.offset + hx_local) * dsz + (hz_local + 0.45) * wall.normalZ
+    const isLeftCorner = cab.wall !== 'back' || cab.offset <= wall.length / 2
+    const size = cab.width || 0.9
+    const edge = cab.type === 'wall_corner_L' ? 0.35 : 0.6
+    const halfS = size / 2
+    const hx_local = isLeftCorner ? (edge - halfS) : -(edge - halfS)
+    const hz_local = edge - halfS
+    const hwx = wall.x1 + (cab.offset + hx_local) * dsx + (hz_local + halfS) * wall.normalX
+    const hwz = wall.z1 + (cab.offset + hx_local) * dsz + (hz_local + halfS) * wall.normalZ
     const { sx: hcx, sy: hcy } = toSvg(hwx, hwz)
 
     handleElements.push(
@@ -473,10 +482,15 @@ export default function TwoDView({
     if (!wall) return
 
     const cabWidth = placingCabinet?.width ?? (draggingId ? cabinets.find(c => c.id === draggingId)?.width ?? 0.6 : 0.6)
+    const isWallCab = placingCabinet 
+      ? placingCabinet.type.startsWith('wall') 
+      : (draggingId ? cabinets.find(c => c.id === draggingId)?.type.startsWith('wall') || false : false)
 
     const snapped = getSnappedOffsetWithLength(
       offset, wall.id, wall.length, cabinets, openings, cabWidth,
-      draggingId ?? undefined
+      draggingId ?? undefined,
+      0.20,
+      isWallCab
     )
 
     const isSnapping = Math.abs(snapped - offset) > 0.01
@@ -689,29 +703,7 @@ export default function TwoDView({
             />
           )}
 
-          {/* Helper test square to demonstrate coordinate mapping */}
-          <rect
-            x={205}
-            y={100}
-            width={50}
-            height={50}
-            fill="rgba(231, 76, 60, 0.25)"
-            stroke="#e74c3c"
-            strokeWidth="2"
-            strokeDasharray="4,2"
-            rx="4"
-          />
-          <text
-            x={230}
-            y={125}
-            fill="#e74c3c"
-            fontSize="10"
-            fontWeight="bold"
-            textAnchor="middle"
-            dominantBaseline="middle"
-          >
-            50px (~70cm)
-          </text>
+
 
           {/* Dimension lines */}
           {renderDimensions()}
