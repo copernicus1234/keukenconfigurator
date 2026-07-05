@@ -688,6 +688,17 @@ export default function ThreeDView({
 
   const woodFloorTexture = useMemo(() => createFloorTexture(), [])
 
+  // Echte fototextuur inladen voor rustiek eiken
+  const naturalOakTexture = useMemo(() => {
+    const loader = new THREE.TextureLoader()
+    const texture = loader.load('/textures/22rustiekEik.jpg')
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
+    texture.repeat.set(1, 1)
+    return texture
+  }, [])
+
   // PBR-achtige materialen maken op basis van de geselecteerde houtkleur
   const materials = useMemo(() => {
     const isSolid = selectedMaterial.id.startsWith('matte')
@@ -698,6 +709,14 @@ export default function ThreeDView({
         color: selectedMaterial.color,
         roughness: selectedMaterial.roughness,
         metalness: 0.1
+      })
+    } else if (selectedMaterial.id === 'natural_oak') {
+      woodMaterial = new THREE.MeshStandardMaterial({
+        map: naturalOakTexture,
+        roughness: selectedMaterial.roughness,
+        metalness: 0.05,
+        bumpMap: naturalOakTexture,
+        bumpScale: 0.002
       })
     } else {
       // Genereer de nerf-textuur

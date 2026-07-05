@@ -5,11 +5,11 @@ import TwoDView from './components/TwoDView'
 import { getWalls, getCabinetTransform } from './utils/geometry'
 
 const DEFAULT_MATERIAL = {
-  id: 'neutral_grey',
-  name: 'Neutraal (Lichtgrijs)',
-  color: '#deded9',
-  roughness: 0.95,
-  previewColor: '#deded9'
+  id: 'natural_oak',
+  name: 'Natuurlijk Eiken',
+  color: '#bfa37a',
+  roughness: 0.85,
+  previewColor: '#cfa976'
 }
 
 export default function App() {

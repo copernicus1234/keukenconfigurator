@@ -7,8 +7,8 @@ const BESCHIKBARE_MODULES = KITCHEN_CATALOG.map(item => ({
 }))
 
 const MATERIALEN = [
-  { id: 'neutral_grey', name: 'Neutraal (Lichtgrijs)', color: '#deded9', roughness: 0.95, previewColor: '#deded9' },
   { id: 'natural_oak', name: 'Natuurlijk Eiken', color: '#bfa37a', roughness: 0.85, previewColor: '#cfa976' },
+  { id: 'neutral_grey', name: 'Neutraal (Lichtgrijs)', color: '#deded9', roughness: 0.95, previewColor: '#deded9' },
   { id: 'smoked_oak', name: 'Gerookt Eiken', color: '#4e3d30', roughness: 0.85, previewColor: '#534337' },
 ]
 
