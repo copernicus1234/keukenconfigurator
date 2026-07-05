@@ -1,6 +1,6 @@
 import { useMemo, Suspense, useEffect, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Grid, ContactShadows, useGLTF, Environment } from '@react-three/drei'
+import { OrbitControls, Grid, ContactShadows, useGLTF, Environment, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { getWalls } from '../utils/geometry'
 
@@ -1144,6 +1144,22 @@ export default function ThreeDView({
           fadeDistance={30}
           infiniteGrid={false}
         />
+
+        {/* Voorbeeldopstelling instructie-tekst op de vloer */}
+        {cabinets.some(c => c.id.startsWith('demo-')) && (
+          <Text
+            position={[-wallDimensions.back / 2, 0.005, wallDimensions.right / 2 + 0.5]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            fontSize={0.14}
+            color="#6e6c64"
+            maxWidth={3.0}
+            textAlign="center"
+          >
+            Voorbeeldopstelling
+            {"\n"}
+            Klik op 'Nieuw Ontwerp' voor uw eigen ontwerp
+          </Text>
+        )}
 
         {/* Render alle kasten */}
         {cabinets.map((cab) => (
