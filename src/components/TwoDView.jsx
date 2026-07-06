@@ -8,6 +8,8 @@ const SVG_H = 520
 const ORIGIN_X = 430    // SVG origin = room corner (right wall meets back wall)
 const ORIGIN_Y = 60     // SVG origin Y
 
+const WALL_LABELS = { back: 'Achterwand', right: 'Rechterwand', left: 'Linkerwand' }
+
 // Convert 3D room coords (x,z) → SVG coords
 // In 3D: x goes negative (back wall), z goes positive (right wall)
 // In SVG: positive x goes right, positive y goes down
@@ -582,59 +584,15 @@ export default function TwoDView({
   const cursor = placingCabinet ? 'crosshair' : draggingId ? 'grabbing' : 'default'
 
   return (
-    <div className="flatplan-container">
-      <div className="flatplan-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-          <span style={{ fontSize: '16px', fontWeight: '600', color: '#8c887d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Geschatte totaalprijs:
-          </span>
-          <span style={{ fontSize: '20px', fontWeight: '700', color: '#826242' }}>
-            € {totalPrice.toLocaleString('nl-BE')}
-          </span>
-        </div>
-        {snapActive && hoverWall && (
-          <span style={{ fontSize: '11px', color: '#826242', fontWeight: '700', background: '#f7f3ec', padding: '2px 8px', borderRadius: '10px' }}>
-            ◎ SNAP
-          </span>
-        )}
-      </div>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px', 
-        padding: '0 20px 10px', 
-        borderBottom: '1px solid #e5e2db',
-        marginBottom: '10px'
-      }}>
-        <label style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '6px', 
-          fontSize: '12px', 
-          color: '#8c887d', 
-          cursor: 'pointer',
-          fontWeight: '600',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px'
-        }}>
-          <input 
-            type="checkbox" 
-            checked={showAxes} 
-            onChange={onToggleAxes} 
-            style={{ 
-              cursor: 'pointer',
-              accentColor: '#826242'
-            }} 
-          />
-          Toon assen
-        </label>
-      </div>
-      <div className="flatplan-svg-wrapper">
+    <div className="flatplan-container" style={{ overflowY: 'auto' }}>
+      
+      {/* 2D Plattegrond helemaal bovenaan, met minimale padding */}
+      <div className="flatplan-svg-wrapper" style={{ padding: '10px 24px', flex: '0 0 auto', display: 'flex', justifyContent: 'center' }}>
         <svg
           ref={svgRef}
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           className="flatplan-svg"
-          style={{ cursor }}
+          style={{ cursor, width: '100%', maxWidth: '520px', height: 'auto' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           onClick={handleClick}
@@ -703,12 +661,96 @@ export default function TwoDView({
             />
           )}
 
-
-
           {/* Dimension lines */}
           {renderDimensions()}
         </svg>
       </div>
+
+      {/* Actuele Opstelling & Totaalprijs direct onder de plattegrond */}
+      <div style={{ borderTop: '1px solid #e5e2db', paddingTop: '12px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '12px', fontWeight: '700', color: '#2c2b29', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
+            Actuele Opstelling ({cabinets.length} elementen)
+          </h3>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: '#8c887d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Geschatte totaalprijs:
+            </span>
+            <span style={{ fontSize: '18px', fontWeight: '700', color: '#826242' }}>
+              € {totalPrice.toLocaleString('nl-BE')}
+            </span>
+          </div>
+        </div>
+
+        {cabinets.length === 0 ? (
+          <p style={{ fontSize: '12px', color: '#8c887d', fontStyle: 'italic', margin: 0 }}>
+            Geen kasten geplaatst. Selecteer een module in de sidebar en klik op de plattegrond om te starten.
+          </p>
+        ) : (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', 
+            gap: '8px', 
+            maxHeight: '200px', 
+            overflowY: 'auto', 
+            paddingRight: '4px' 
+          }}>
+            {cabinets.map((cab, i) => (
+              <div
+                key={cab.id}
+                onClick={() => onSelectCabinet(cab.id)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  background: selectedCabinetId === cab.id ? '#f7f3ec' : '#fcfbfa',
+                  border: '1px solid',
+                  borderColor: selectedCabinetId === cab.id ? '#826242' : '#e5e2db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#2c2b29' }}>
+                    <span style={{ color: '#826242', marginRight: '6px' }}>#{i + 1}</span>
+                    {cab.code}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#8c887d' }}>
+                    {Math.round(cab.width * 100)}cm · {WALL_LABELS[cab.wall]}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#826242' }}>
+                    € {cab.price}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteCabinet(cab.id)
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#a6a297',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      padding: '0 4px',
+                      lineHeight: 1,
+                    }}
+                    title="Verwijderen"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }

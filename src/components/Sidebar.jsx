@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { KITCHEN_CATALOG } from '../constants/kitchenCatalog'
 
 const BESCHIKBARE_MODULES = KITCHEN_CATALOG.map(item => ({
@@ -44,6 +44,27 @@ export default function Sidebar({
   onSelectFloorType,
 }) {
   const [activeTab, setActiveTab] = useState('room') // 'room' | 'cabinets'
+  const [expandedCategory, setExpandedCategory] = useState('onderkasten') // null | 'onderkasten' | 'bovenkasten' | 'hoge_kasten'
+  const [subFilters, setSubFilters] = useState({
+    onderkasten: 'All',
+    bovenkasten: 'All',
+    hoge_kasten: 'All'
+  })
+
+  const categorizedModules = useMemo(() => {
+    return {
+      onderkasten: BESCHIKBARE_MODULES.filter(m => m.code.startsWith('ME')),
+      bovenkasten: BESCHIKBARE_MODULES.filter(m => m.code.startsWith('WE')),
+      hoge_kasten: BESCHIKBARE_MODULES.filter(m => m.code.startsWith('HE')),
+    }
+  }, [])
+
+  const getFilteredModules = (category) => {
+    const list = categorizedModules[category] || []
+    const filter = subFilters[category]
+    if (filter === 'All') return list
+    return list.filter(m => m.type === filter)
+  }
 
   const visibleWalls = roomShape === 'straight'
     ? ['back']
@@ -339,31 +360,223 @@ export default function Sidebar({
             {/* Modules toevoegen */}
             <div>
               <h2 className="section-title">Modules</h2>
-              <div className="module-list">
-                {BESCHIKBARE_MODULES.map(mod => (
-                  <div
-                    key={mod.code}
-                    className="module-item"
-                    onClick={() => onAddCabinet(mod)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                
+                {/* ONDERKASTEN SECTION */}
+                <div style={{ border: '1px solid #e5e2db', borderRadius: '6px', overflow: 'hidden' }}>
+                  <button
+                    onClick={() => setExpandedCategory(expandedCategory === 'onderkasten' ? null : 'onderkasten')}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      background: expandedCategory === 'onderkasten' ? '#f7f3ec' : '#fff',
+                      border: 'none',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: expandedCategory === 'onderkasten' ? '#826242' : '#2c2b29',
+                      transition: 'all 0.2s'
+                    }}
                   >
-                    <div className="module-info">
-                      <span className="module-code">{mod.code}</span>
-                      <span className="module-desc">{mod.desc}</span>
+                    <span>Onderkasten</span>
+                    <span>{expandedCategory === 'onderkasten' ? '▼' : '▶'}</span>
+                  </button>
+                  
+                  {expandedCategory === 'onderkasten' && (
+                    <div style={{ padding: '10px', background: '#fff', borderTop: '1px solid #e5e2db' }}>
+                      {/* Sub-filters row */}
+                      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '8px', borderBottom: '1px solid #f2efea' }}>
+                        {[
+                          { id: 'All', label: 'Alles' },
+                          { id: 'door', label: 'Deur' },
+                          { id: 'drawers', label: 'Lades' },
+                          { id: 'sink', label: 'Spoelen' },
+                          { id: 'corner_L', label: 'Hoek' }
+                        ].map(f => (
+                          <button
+                            key={f.id}
+                            onClick={() => setSubFilters(prev => ({ ...prev, onderkasten: f.id }))}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              borderRadius: '12px',
+                              border: '1px solid',
+                              borderColor: subFilters.onderkasten === f.id ? '#826242' : '#e5e2db',
+                              background: subFilters.onderkasten === f.id ? '#826242' : '#fff',
+                              color: subFilters.onderkasten === f.id ? '#fff' : '#6c685d',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Filtered module cards */}
+                      <div className="module-list" style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                        {getFilteredModules('onderkasten').map(mod => (
+                          <div key={mod.code} className="module-item" onClick={() => onAddCabinet(mod)}>
+                            <div className="module-info">
+                              <span className="module-code">{mod.code}</span>
+                              <span className="module-desc">{mod.desc}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                              <span style={{
+                                fontSize: '11px', fontWeight: '700',
+                                color: '#ffffff',
+                                background: 'linear-gradient(135deg, #826242, #a07850)',
+                                borderRadius: '10px',
+                                padding: '2px 8px',
+                                letterSpacing: '0.3px',
+                                whiteSpace: 'nowrap'
+                              }}>€ {mod.price}</span>
+                              <button className="module-add-btn">+</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-                      <span style={{
-                        fontSize: '11px', fontWeight: '700',
-                        color: '#ffffff',
-                        background: 'linear-gradient(135deg, #826242, #a07850)',
-                        borderRadius: '10px',
-                        padding: '2px 8px',
-                        letterSpacing: '0.3px',
-                        whiteSpace: 'nowrap'
-                      }}>€ {mod.price}</span>
-                      <button className="module-add-btn">+</button>
+                  )}
+                </div>
+
+                {/* BOVENKASTEN SECTION */}
+                <div style={{ border: '1px solid #e5e2db', borderRadius: '6px', overflow: 'hidden' }}>
+                  <button
+                    onClick={() => setExpandedCategory(expandedCategory === 'bovenkasten' ? null : 'bovenkasten')}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      background: expandedCategory === 'bovenkasten' ? '#f7f3ec' : '#fff',
+                      border: 'none',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: expandedCategory === 'bovenkasten' ? '#826242' : '#2c2b29',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <span>Bovenkasten</span>
+                    <span>{expandedCategory === 'bovenkasten' ? '▼' : '▶'}</span>
+                  </button>
+                  
+                  {expandedCategory === 'bovenkasten' && (
+                    <div style={{ padding: '10px', background: '#fff', borderTop: '1px solid #e5e2db' }}>
+                      {/* Sub-filters row */}
+                      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '8px', borderBottom: '1px solid #f2efea' }}>
+                        {[
+                          { id: 'All', label: 'Alles' },
+                          { id: 'wall', label: 'Deur' },
+                          { id: 'wall_extractor', label: 'Afzuigkap' },
+                          { id: 'wall_corner_L', label: 'Hoek' }
+                        ].map(f => (
+                          <button
+                            key={f.id}
+                            onClick={() => setSubFilters(prev => ({ ...prev, bovenkasten: f.id }))}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              borderRadius: '12px',
+                              border: '1px solid',
+                              borderColor: subFilters.bovenkasten === f.id ? '#826242' : '#e5e2db',
+                              background: subFilters.bovenkasten === f.id ? '#826242' : '#fff',
+                              color: subFilters.bovenkasten === f.id ? '#fff' : '#6c685d',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Filtered module cards */}
+                      <div className="module-list" style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                        {getFilteredModules('bovenkasten').map(mod => (
+                          <div key={mod.code} className="module-item" onClick={() => onAddCabinet(mod)}>
+                            <div className="module-info">
+                              <span className="module-code">{mod.code}</span>
+                              <span className="module-desc">{mod.desc}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                              <span style={{
+                                fontSize: '11px', fontWeight: '700',
+                                color: '#ffffff',
+                                background: 'linear-gradient(135deg, #826242, #a07850)',
+                                borderRadius: '10px',
+                                padding: '2px 8px',
+                                letterSpacing: '0.3px',
+                                whiteSpace: 'nowrap'
+                              }}>€ {mod.price}</span>
+                              <button className="module-add-btn">+</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
+
+                {/* HOGE KASTEN SECTION */}
+                <div style={{ border: '1px solid #e5e2db', borderRadius: '6px', overflow: 'hidden' }}>
+                  <button
+                    onClick={() => setExpandedCategory(expandedCategory === 'hoge_kasten' ? null : 'hoge_kasten')}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      background: expandedCategory === 'hoge_kasten' ? '#f7f3ec' : '#fff',
+                      border: 'none',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: expandedCategory === 'hoge_kasten' ? '#826242' : '#2c2b29',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <span>Hoge kasten</span>
+                    <span>{expandedCategory === 'hoge_kasten' ? '▼' : '▶'}</span>
+                  </button>
+                  
+                  {expandedCategory === 'hoge_kasten' && (
+                    <div style={{ padding: '10px', background: '#fff', borderTop: '1px solid #e5e2db' }}>
+                      {/* Filtered module cards */}
+                      <div className="module-list" style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                        {getFilteredModules('hoge_kasten').map(mod => (
+                          <div key={mod.code} className="module-item" onClick={() => onAddCabinet(mod)}>
+                            <div className="module-info">
+                              <span className="module-code">{mod.code}</span>
+                              <span className="module-desc">{mod.desc}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+                              <span style={{
+                                fontSize: '11px', fontWeight: '700',
+                                color: '#ffffff',
+                                background: 'linear-gradient(135deg, #826242, #a07850)',
+                                borderRadius: '10px',
+                                padding: '2px 8px',
+                                letterSpacing: '0.3px',
+                                whiteSpace: 'nowrap'
+                              }}>€ {mod.price}</span>
+                              <button className="module-add-btn">+</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
 
@@ -480,46 +693,7 @@ export default function Sidebar({
               </div>
             )}
 
-            {/* Opstelling */}
-            <div>
-              <h2 className="section-title">Opstelling ({cabinets.length})</h2>
-              {cabinets.length === 0 ? (
-                <p style={{ fontSize: '12px', color: '#8c887d', fontStyle: 'italic' }}>
-                  Selecteer een module hierboven en klik op de plattegrond.
-                </p>
-              ) : (
-                <div className="placed-list">
-                  {cabinets.map((cab, i) => (
-                    <div
-                      key={cab.id}
-                      className={`placed-item ${selectedCabinetId === cab.id ? 'selected' : ''}`}
-                      onClick={() => onSelectCabinet(cab.id)}
-                    >
-                      <div>
-                        <span style={{ color: '#826242', marginRight: '6px' }}>#{i + 1}</span>
-                        <span>{cab.code}</span>
-                        <span style={{ color: '#8c887d', fontSize: '10px', marginLeft: '6px' }}>
-                          ({Math.round(cab.width * 100)}cm · {WALL_LABELS[cab.wall]})
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {cab.price > 0 && (
-                          <span style={{
-                            fontSize: '10px', fontWeight: '700',
-                            color: '#826242',
-                          }}>€ {cab.price}</span>
-                        )}
-                        <button
-                          className="placed-delete-btn"
-                          onClick={e => { e.stopPropagation(); onDeleteCabinet(cab.id) }}
-                          style={{ fontSize: '20px', fontWeight: 'bold' }}
-                        >−</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+
           </>
         )}
       </div>
