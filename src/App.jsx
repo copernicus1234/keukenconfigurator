@@ -12,85 +12,38 @@ const DEFAULT_MATERIAL = {
   previewColor: '#cfa976'
 }
 
-// Vooraf geladen voorbeeldkeukens (Willekeurig gekozen op start)
-const PRESETS = [
-  // Preset 1: L-keuken in U-ruimte
-  {
-    roomShape: 'U-shape',
-    wallLengths: { back: 4.0, right: 4.74, left: 3.0 },
-    cabinets: [
-      { id: 'demo-c1', code: 'ME401', type: 'corner_L', width: 0.9, height: 0.8, depth: 0.9, wall: 'back', offset: 0.45, price: 379 },
-      { id: 'demo-c2', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.20, price: 319 },
-      { id: 'demo-c3', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.80, price: 189 },
-      { id: 'demo-c4', code: 'ME103', type: 'door', width: 0.8, height: 0.8, depth: 0.6, wall: 'back', offset: 2.50, price: 229 },
-      { id: 'demo-w1', code: 'WE401', type: 'wall_corner_L', width: 0.9, height: 0.6, depth: 0.9, wall: 'back', offset: 0.45, price: 249 },
-      { id: 'demo-w2', code: 'WE101', type: 'wall', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 1.20, price: 149 },
-      { id: 'demo-w3', code: 'WE201', type: 'wall_extractor', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 1.80, price: 289 },
-      { id: 'demo-w4', code: 'WE102', type: 'wall', width: 0.8, height: 0.6, depth: 0.35, wall: 'back', offset: 2.50, price: 179 },
-      { id: 'demo-r1', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 1.20, price: 189 },
-      { id: 'demo-r2', code: 'ME301', type: 'sink', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 1.80, price: 249 },
-      { id: 'demo-r3', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 2.40, price: 319 },
-      { id: 'demo-r4', code: 'HE101', type: 'tall', width: 0.6, height: 1.95, depth: 0.6, wall: 'right', offset: 3.00, price: 399 }
-    ],
-    openings: [
-      { id: 'demo-d1', type: 'door', wall: 'left', offset: 1.50, width: 0.8, height: 2.0, sillHeight: 0.0 },
-      { id: 'demo-op1', type: 'window', wall: 'right', offset: 1.20, width: 1.2, height: 1.2, sillHeight: 0.9 }
-    ]
-  },
-  // Preset 2: Rechte keuken op achterwand
-  {
-    roomShape: 'straight',
-    wallLengths: { back: 4.5, right: 3.0, left: 3.0 },
-    cabinets: [
-      { id: 'demo-c1', code: 'HE101', type: 'tall', width: 0.6, height: 1.95, depth: 0.6, wall: 'back', offset: 0.30, price: 399 },
-      { id: 'demo-c2', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 0.90, price: 319 },
-      { id: 'demo-c3', code: 'ME103', type: 'door', width: 0.8, height: 0.8, depth: 0.6, wall: 'back', offset: 1.60, price: 229 },
-      { id: 'demo-c4', code: 'ME301', type: 'sink', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 2.30, price: 249 },
-      { id: 'demo-c5', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 2.90, price: 319 },
-      { id: 'demo-c6', code: 'HE101', type: 'tall', width: 0.6, height: 1.95, depth: 0.6, wall: 'back', offset: 3.50, price: 399 },
-      { id: 'demo-w1', code: 'WE101', type: 'wall', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 0.90, price: 149 },
-      { id: 'demo-w2', code: 'WE102', type: 'wall', width: 0.8, height: 0.6, depth: 0.35, wall: 'back', offset: 1.60, price: 179 },
-      { id: 'demo-w3', code: 'WE101', type: 'wall', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 2.90, price: 149 }
-    ],
-    openings: [
-      { id: 'demo-op1', type: 'window', wall: 'back', offset: 1.70, width: 1.2, height: 1.2, sillHeight: 0.9 }
-    ]
-  },
-  // Preset 3: U-keuken
-  {
-    roomShape: 'U-shape',
-    wallLengths: { back: 3.6, right: 3.6, left: 3.0 },
-    cabinets: [
-      { id: 'demo-c1', code: 'ME401', type: 'corner_L', width: 0.9, height: 0.8, depth: 0.9, wall: 'back', offset: 0.45, price: 379 },
-      { id: 'demo-c2', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.20, price: 319 },
-      { id: 'demo-c3', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.80, price: 189 },
-      { id: 'demo-c4', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 2.40, price: 319 },
-      { id: 'demo-c5', code: 'ME401', type: 'corner_L', width: 0.9, height: 0.8, depth: 0.9, wall: 'back', offset: 3.15, price: 379 },
-      { id: 'demo-w1', code: 'WE401', type: 'wall_corner_L', width: 0.9, height: 0.6, depth: 0.9, wall: 'back', offset: 0.45, price: 249 },
-      { id: 'demo-w2', code: 'WE101', type: 'wall', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 1.20, price: 149 },
-      { id: 'demo-w3', code: 'WE201', type: 'wall_extractor', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 1.80, price: 289 },
-      { id: 'demo-w4', code: 'WE101', type: 'wall', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 2.40, price: 149 },
-      { id: 'demo-w5', code: 'WE401', type: 'wall_corner_L', width: 0.9, height: 0.6, depth: 0.9, wall: 'back', offset: 3.15, price: 249 },
-      { id: 'demo-l1', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'left', offset: 1.20, price: 189 },
-      { id: 'demo-l2', code: 'HE101', type: 'tall', width: 0.6, height: 1.95, depth: 0.6, wall: 'left', offset: 1.80, price: 399 },
-      { id: 'demo-r1', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 1.20, price: 189 },
-      { id: 'demo-r2', code: 'ME301', type: 'sink', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 1.80, price: 249 },
-      { id: 'demo-r3', code: 'HE101', type: 'tall', width: 0.6, height: 1.95, depth: 0.6, wall: 'right', offset: 2.40, price: 399 }
-    ],
-    openings: [
-      { id: 'demo-d1', type: 'door', wall: 'left', offset: 2.40, width: 0.8, height: 2.0, sillHeight: 0.0 },
-      { id: 'demo-op1', type: 'window', wall: 'right', offset: 1.20, width: 1.2, height: 1.2, sillHeight: 0.9 }
-    ]
-  }
+// Vooraf geladen voorbeeldkeuken (U-ruimte met L-opstelling kasten)
+const INITIAL_CABINETS = [
+  // Achterwand (back)
+  { id: 'demo-c1', code: 'ME401', type: 'corner_L', width: 0.9, height: 0.8, depth: 0.9, wall: 'back', offset: 0.45, price: 379 },
+  { id: 'demo-c2', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.20, price: 319 },
+  { id: 'demo-c3', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.80, price: 189 },
+  { id: 'demo-c4', code: 'ME103', type: 'door', width: 0.8, height: 0.8, depth: 0.6, wall: 'back', offset: 2.50, price: 229 },
+  
+  { id: 'demo-w1', code: 'WE401', type: 'wall_corner_L', width: 0.9, height: 0.6, depth: 0.9, wall: 'back', offset: 0.45, price: 249 },
+  { id: 'demo-w2', code: 'WE101', type: 'wall', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 1.20, price: 149 },
+  { id: 'demo-w3', code: 'WE201', type: 'wall_extractor', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 1.80, price: 289 },
+  { id: 'demo-w4', code: 'WE102', type: 'wall', width: 0.8, height: 0.6, depth: 0.35, wall: 'back', offset: 2.50, price: 179 },
+
+  // Rechterwand (right)
+  { id: 'demo-r1', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 1.20, price: 189 },
+  { id: 'demo-r2', code: 'ME301', type: 'sink', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 1.80, price: 249 },
+  { id: 'demo-r3', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'right', offset: 2.40, price: 319 },
+  { id: 'demo-r4', code: 'HE101', type: 'tall', width: 0.6, height: 1.95, depth: 0.6, wall: 'right', offset: 3.00, price: 399 }
 ]
 
-const RANDOM_PRESET = PRESETS[Math.floor(Math.random() * PRESETS.length)]
+const INITIAL_OPENINGS = [
+  // Deur linkerwand
+  { id: 'demo-d1', type: 'door', wall: 'left', offset: 1.50, width: 0.8, height: 2.0, sillHeight: 0.0 },
+  // Raam rechterwand (boven de spoelkast op offset 1.8)
+  { id: 'demo-op1', type: 'window', wall: 'right', offset: 1.20, width: 1.2, height: 1.2, sillHeight: 0.9 }
+]
 
 export default function App() {
-  const [roomShape, setRoomShape] = useState(RANDOM_PRESET.roomShape)
-  const [wallLengths, setWallLengths] = useState(RANDOM_PRESET.wallLengths)
-  const [cabinets, setCabinets] = useState(RANDOM_PRESET.cabinets)
-  const [openings, setOpenings] = useState(RANDOM_PRESET.openings)
+  const [roomShape, setRoomShape] = useState('U-shape') // 'straight' | 'L-shape' | 'U-shape'
+  const [wallLengths, setWallLengths] = useState({ back: 4.0, right: 4.74, left: 3.0 })
+  const [cabinets, setCabinets] = useState(INITIAL_CABINETS)
+  const [openings, setOpenings] = useState(INITIAL_OPENINGS)
   const [selectedCabinetId, setSelectedCabinetId] = useState(null)
   const [selectedOpeningId, setSelectedOpeningId] = useState(null)
   const [selectedMaterial, setSelectedMaterial] = useState(DEFAULT_MATERIAL)
