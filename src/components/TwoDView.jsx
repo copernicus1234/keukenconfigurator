@@ -181,6 +181,49 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
         strokeDasharray="4,4"
       />
     )
+
+    if (cab.code === 'ME104') {
+      const hingeX = cx - halfW * dsx + depthPx * wall.normalX
+      const hingeY = cy - halfW * dsz + depthPx * wall.normalZ
+
+      const phi = Math.PI / 4
+      const cosPhi = Math.cos(phi)
+      const sinPhi = Math.sin(phi)
+
+      const doorEndX = hingeX + widthPx * (cosPhi * dsx + sinPhi * wall.normalX)
+      const doorEndY = hingeY + widthPx * (cosPhi * dsz + sinPhi * wall.normalZ)
+
+      drawerLines.push(
+        <line
+          key="open_door"
+          x1={hingeX}
+          y1={hingeY}
+          x2={doorEndX}
+          y2={doorEndY}
+          stroke="#2c2b29"
+          strokeWidth="2"
+        />
+      )
+
+      const closedEndX = hingeX + widthPx * dsx
+      const closedEndY = hingeY + widthPx * dsz
+
+      const cross = dsx * wall.normalZ - dsz * wall.normalX
+      const sweepFlag = cross > 0 ? 1 : 0
+
+      const arcPath = `M ${closedEndX},${closedEndY} A ${widthPx},${widthPx} 0 0,${sweepFlag} ${doorEndX},${doorEndY}`
+
+      drawerLines.push(
+        <path
+          key="open_door_arc"
+          d={arcPath}
+          fill="none"
+          stroke="#8c887d"
+          strokeWidth="1.5"
+          strokeDasharray="2,2"
+        />
+      )
+    }
   }
 
   // Handles
@@ -274,6 +317,37 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
         />
       )
     }
+  }
+
+  if (cab.code === 'ME104') {
+    const halfW = widthPx / 2
+    const hingeX = cx - halfW * dsx + depthPx * wall.normalX
+    const hingeY = cy - halfW * dsz + depthPx * wall.normalZ
+    const phi = Math.PI / 4
+    const cosPhi = Math.cos(phi)
+    const sinPhi = Math.sin(phi)
+
+    const handleDist = widthPx * 0.8
+    const handleStartX = hingeX + handleDist * (cosPhi * dsx + sinPhi * wall.normalX)
+    const handleStartY = hingeY + handleDist * (cosPhi * dsz + sinPhi * wall.normalZ)
+
+    const handleDirX = -sinPhi * dsx + cosPhi * wall.normalX
+    const handleDirY = -sinPhi * dsz + cosPhi * wall.normalZ
+
+    const handleEndX = handleStartX + 4 * handleDirX
+    const handleEndY = handleStartY + 4 * handleDirY
+
+    handleElements.push(
+      <line
+        key="h-open-door"
+        x1={handleStartX}
+        y1={handleStartY}
+        x2={handleEndX}
+        y2={handleEndY}
+        stroke={handleColor}
+        strokeWidth="2"
+      />
+    )
   }
 
   return (

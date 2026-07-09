@@ -176,6 +176,31 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       type === 'sink'    ? 'base_sink'   :
       type
 
+    if (code === 'ME104') {
+      const baseHeight = height <= 0.85 ? height : 0.8
+      const doorW = width - gap
+      const doorH = baseHeight - gap
+      const gripR = 0.007
+      const doorGripLen = doorW * 0.55
+      const openAngle = -Math.PI / 4 // 45 graden open
+      return (
+        <group position={[-width / 2, 0, depth / 2]}>
+          <group rotation={[0, openAngle, 0]}>
+            {/* Deur front */}
+            <mesh position={[doorW / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+              <boxGeometry args={[doorW, doorH, frontDepth]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+            {/* Horizontale handgreep */}
+            <mesh position={[doorW / 2, doorH / 2 - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
+              <primitive object={metalMaterial} attach="material" />
+            </mesh>
+          </group>
+        </group>
+      )
+    }
+
     if (resolvedType === 'tall') {
       // Hoge kast: een onderdeur en een bovendeur
       const lowerDoorH = 0.72

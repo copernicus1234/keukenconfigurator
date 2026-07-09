@@ -19,7 +19,7 @@ export const KITCHEN_CATALOG = [
   },
   {
     code: 'ME104',
-    name: 'Laag blok 400 1 schap (+ plint 100)',
+    name: 'Laag blok 400 1 schap met halfopen deurtje (+ plint 100)',
     width: 0.4,
     height: 0.8,
     depth: 0.6,

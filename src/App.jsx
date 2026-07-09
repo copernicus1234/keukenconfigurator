@@ -19,6 +19,7 @@ const INITIAL_CABINETS = [
   { id: 'demo-c2', code: 'ME201', type: 'drawers', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.20, price: 319 },
   { id: 'demo-c3', code: 'ME102', type: 'door', width: 0.6, height: 0.8, depth: 0.6, wall: 'back', offset: 1.80, price: 189 },
   { id: 'demo-c4', code: 'ME103', type: 'door', width: 0.8, height: 0.8, depth: 0.6, wall: 'back', offset: 2.50, price: 229 },
+  { id: 'demo-c5', code: 'ME104', type: 'open_shelf', width: 0.4, height: 0.8, depth: 0.6, wall: 'back', offset: 3.10, price: 139 },
   
   { id: 'demo-w1', code: 'WE401', type: 'wall_corner_L', width: 0.9, height: 0.6, depth: 0.9, wall: 'back', offset: 0.45, price: 249 },
   { id: 'demo-w2', code: 'WE101', type: 'wall', width: 0.6, height: 0.6, depth: 0.35, wall: 'back', offset: 1.20, price: 149 },
