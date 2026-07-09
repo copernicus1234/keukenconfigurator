@@ -18,6 +18,15 @@ export const KITCHEN_CATALOG = [
     price: 229
   },
   {
+    code: 'ME104',
+    name: 'Laag blok 400 1 schap (+ plint 100)',
+    width: 0.4,
+    height: 0.8,
+    depth: 0.6,
+    type: 'open_shelf',
+    price: 139
+  },
+  {
     code: 'ME201',
     name: 'Ladekast 3 lades (60cm)',
     width: 0.6,

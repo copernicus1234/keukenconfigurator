@@ -133,7 +133,7 @@ function createFloorTexture() {
 
 // Reginox Queen 60 Sink Component (GLTF model)
 function ReginoxSink({ metalMaterial }) {
-  const { scene } = useGLTF('/models/R16633_S_SST_CAD_V2202.gltf')
+  const { scene } = useGLTF(`${import.meta.env.BASE_URL}models/R16633_S_SST_CAD_V2202.gltf`)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
   useEffect(() => {
@@ -609,6 +609,40 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
             <primitive object={woodMaterial} attach="material" />
           </mesh>
         </group>
+      ) : type === 'open_shelf' ? (
+        // Open kast met 1 legplank (schap)
+        <group>
+          {/* Bodem */}
+          <mesh position={[0, -height / 2 + 0.009, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width, 0.018, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Top */}
+          <mesh position={[0, height / 2 - 0.009, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width, 0.018, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Linkerzijwand */}
+          <mesh position={[-width / 2 + 0.009, 0, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.018, height - 0.036, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Rechterzijwand */}
+          <mesh position={[width / 2 - 0.009, 0, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.018, height - 0.036, depth]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Achterwand */}
+          <mesh position={[0, 0, -depth / 2 + 0.009]} castShadow receiveShadow>
+            <boxGeometry args={[width - 0.036, height - 0.036, 0.018]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+          {/* Legplank (schap) in het midden */}
+          <mesh position={[0, 0, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width - 0.036, 0.018, depth - 0.036]} />
+            <primitive object={woodMaterial} attach="material" />
+          </mesh>
+        </group>
       ) : type === 'sink' ? (
         // Spoelkast: U-vorm zonder bovenpaneel zodat de spoelbak erdoorheen kan zakken
         <group>
@@ -691,7 +725,7 @@ export default function ThreeDView({
   // Echte fototextuur inladen voor rustiek eiken
   const naturalOakTexture = useMemo(() => {
     const loader = new THREE.TextureLoader()
-    const texture = loader.load('/textures/22rustiekEik.jpg')
+    const texture = loader.load(`${import.meta.env.BASE_URL}textures/22rustiekEik.jpg`)
     texture.colorSpace = THREE.SRGBColorSpace
     texture.wrapS = THREE.RepeatWrapping
     texture.wrapT = THREE.RepeatWrapping
@@ -760,7 +794,7 @@ export default function ThreeDView({
       // Begin met kasten die direct op deze muur staan
       let baseCabinets = cabinets.filter(
         c => c.wall === wallId
-          && (c.type.startsWith('base') || ['door', 'drawers', 'sink', 'corner_L'].includes(c.type))
+          && (c.type.startsWith('base') || ['door', 'drawers', 'sink', 'corner_L', 'open_shelf'].includes(c.type))
           && c.id !== draggingId  // sluit sleepende kast uit van werkblad-berekening
       )
 

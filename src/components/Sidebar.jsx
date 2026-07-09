@@ -79,7 +79,7 @@ export default function Sidebar({
       {/* Logo */}
       <div className="logo-container">
         <img
-          src="/logoNovia3.svg"
+          src={`${import.meta.env.BASE_URL}logoNovia3.svg`}
           alt="Kodiak Interieurs"
           onError={(e) => {
             e.target.style.display = 'none'
@@ -155,9 +155,9 @@ export default function Sidebar({
         {/* === TAB: RUIMTE === */}
         {activeTab === 'room' && (
           <>
-            {/* Kamervorm kiezen */}
+            {/* Keukenvorm kiezen */}
             <div>
-              <h2 className="section-title">Kamervorm</h2>
+              <h2 className="section-title">Keukenvorm</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
                 {ROOM_SHAPES.map(s => (
                   <button
@@ -394,7 +394,8 @@ export default function Sidebar({
                           { id: 'door', label: 'Deur' },
                           { id: 'drawers', label: 'Lades' },
                           { id: 'sink', label: 'Spoelen' },
-                          { id: 'corner_L', label: 'Hoek' }
+                          { id: 'corner_L', label: 'Hoek' },
+                          { id: 'open_shelf', label: 'Open' }
                         ].map(f => (
                           <button
                             key={f.id}

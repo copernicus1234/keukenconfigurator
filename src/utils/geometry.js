@@ -1,4 +1,4 @@
-// Wandsysteem definities op basis van kamervorm en lengtes
+// Wandsysteem definities op basis van keukenvorm en lengtes
 export function getWalls(shape, lengths) {
   const walls = [
     {

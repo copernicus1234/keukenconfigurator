@@ -166,6 +166,21 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
         strokeDasharray="2,2"
       />
     )
+  } else if (cab.type === 'open_shelf') {
+    const dShelf = depthPx * 0.5
+    const halfW = widthPx / 2
+    drawerLines.push(
+      <line
+        key="shelf"
+        x1={cx - halfW * dsx + dShelf * wall.normalX}
+        y1={cy - halfW * dsz + dShelf * wall.normalZ}
+        x2={cx + halfW * dsx + dShelf * wall.normalX}
+        y2={cy + halfW * dsz + dShelf * wall.normalZ}
+        stroke="#a6a297"
+        strokeWidth="1.5"
+        strokeDasharray="4,4"
+      />
+    )
   }
 
   // Handles
@@ -244,7 +259,7 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
           strokeWidth="1.5"
         />
       )
-    } else if (cab.type !== 'base_dishwasher') {
+    } else if (cab.type !== 'base_dishwasher' && cab.type !== 'open_shelf') {
       const hc_x = cx + (halfW - 6) * dsx + depthPx * wall.normalX
       const hc_y = cy + (halfW - 6) * dsz + depthPx * wall.normalZ
       handleElements.push(
