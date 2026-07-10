@@ -13,12 +13,12 @@ function CameraLight() {
     }
   })
   return (
-    <pointLight 
-      ref={lightRef} 
-      intensity={0.20} 
+    <pointLight
+      ref={lightRef}
+      intensity={0.20}
       decay={0}
       distance={0}
-      castShadow={false} 
+      castShadow={false}
     />
   )
 }
@@ -29,11 +29,11 @@ function createWoodTexture(baseColorHex, grainColorHex) {
   canvas.width = 512
   canvas.height = 512
   const ctx = canvas.getContext('2d')
-  
+
   // Achtergrondkleur (basis hout)
   ctx.fillStyle = baseColorHex
   ctx.fillRect(0, 0, 512, 512)
-  
+
   // Fijne houtnerven
   ctx.fillStyle = grainColorHex
   for (let i = 0; i < 180; i++) {
@@ -42,7 +42,7 @@ function createWoodTexture(baseColorHex, grainColorHex) {
     ctx.globalAlpha = 0.04 + Math.random() * 0.06
     ctx.fillRect(0, y, 512, height)
   }
-  
+
   // Houtvlammen / golven
   for (let j = 0; j < 8; j++) {
     ctx.globalAlpha = 0.02
@@ -69,7 +69,7 @@ function createWoodTexture(baseColorHex, grainColorHex) {
     ctx.arc(knotX, knotY, 30, 0, Math.PI * 2)
     ctx.fill()
   }
-  
+
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping
@@ -84,24 +84,24 @@ function createFloorTexture() {
   canvas.width = 512
   canvas.height = 512
   const ctx = canvas.getContext('2d')
-  
+
   // Warme basis houtkleur
   ctx.fillStyle = '#dfc3a3'
   ctx.fillRect(0, 0, 512, 512)
-  
+
   // Teken parketplanken
   ctx.strokeStyle = '#c5a583'
   ctx.lineWidth = 1.5
   const plankWidth = 64
   const plankLength = 256
-  
+
   for (let i = 0; i < 512; i += plankWidth) {
     // Verticale lijnen
     ctx.beginPath()
     ctx.moveTo(i, 0)
     ctx.lineTo(i, 512)
     ctx.stroke()
-    
+
     // Horizontale naden (staggered)
     const offset = (i / plankWidth) % 2 * 128
     for (let j = offset; j < 512 + 256; j += plankLength) {
@@ -111,7 +111,7 @@ function createFloorTexture() {
       ctx.stroke()
     }
   }
-  
+
   // Fijne houtnerven toevoegen voor realisme
   ctx.fillStyle = '#b59573'
   for (let k = 0; k < 1500; k++) {
@@ -122,7 +122,7 @@ function createFloorTexture() {
     const rh = 1
     ctx.fillRect(rx, ry, rw, rh)
   }
-  
+
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping
@@ -218,9 +218,9 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
     // Normaliseer catalogus-types naar renderer-types
     const resolvedType =
       type === 'drawers' ? 'base_drawer' :
-      type === 'door'    ? 'base_door'   :
-      type === 'sink'    ? 'base_sink'   :
-      type
+        type === 'door' ? 'base_door' :
+          type === 'sink' ? 'base_sink' :
+            type
 
     if (code === 'ME104') {
       const baseHeight = height <= 0.85 ? height : 0.8
@@ -411,16 +411,16 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
     const lineD = frontDepth + 0.002
 
     if (resolvedType === 'base_drawer') {
-      const topH    = baseHeight * 0.17
-      const midH    = baseHeight * 0.33
+      const topH = baseHeight * 0.17
+      const midH = baseHeight * 0.33
       const bottomH = baseHeight - topH - midH - gap * 2
 
-      const topY    = baseHeight / 2 - topH / 2
-      const midY    = baseHeight / 2 - topH - gap - midH / 2
-      const botY    = -baseHeight / 2 + bottomH / 2
+      const topY = baseHeight / 2 - topH / 2
+      const midY = baseHeight / 2 - topH - gap - midH / 2
+      const botY = -baseHeight / 2 + bottomH / 2
 
-      const seam1Y  = baseHeight / 2 - topH - gap / 2
-      const seam2Y  = -baseHeight / 2 + bottomH + gap / 2
+      const seam1Y = baseHeight / 2 - topH - gap / 2
+      const seam2Y = -baseHeight / 2 + bottomH + gap / 2
 
       const topSlide = openProgress * 0.35
       const midSlide = openProgress * 0.23
@@ -491,7 +491,7 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
         const dummyH = 0.14
         const doorH = baseHeight - dummyH
         const seamY = baseHeight / 2 - dummyH - gap / 2
-        
+
         const leftOpenAngle = openProgress * -1.8
         const rightOpenAngle = openProgress * 1.8
         const singleOpenAngle = openProgress * -1.8
@@ -679,9 +679,9 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
   const isLeftCorner = cabinet.wall === 'back' ? cabinet.offset <= 1.5 : cabinet.wall === 'left'
 
   return (
-    <group 
-      position={position} 
-      rotation={groupRotation} 
+    <group
+      position={position}
+      rotation={groupRotation}
       onClick={(e) => {
         e.stopPropagation()
         if (isSelected && onToggleOpen) {
@@ -895,7 +895,7 @@ export default function ThreeDView({
   // PBR-achtige materialen maken op basis van de geselecteerde houtkleur
   const materials = useMemo(() => {
     const isSolid = selectedMaterial.id.startsWith('matte')
-    
+
     let woodMaterial
     if (isSolid) {
       woodMaterial = new THREE.MeshStandardMaterial({
@@ -914,7 +914,7 @@ export default function ThreeDView({
     } else {
       // Genereer de nerf-textuur
       const woodTexture = createWoodTexture(selectedMaterial.color, '#000000')
-      
+
       // Hout materiaal
       woodMaterial = new THREE.MeshStandardMaterial({
         map: woodTexture,
@@ -924,7 +924,7 @@ export default function ThreeDView({
         bumpScale: 0.001
       })
     }
-    
+
     // Werkblad materiaal (beton/steen look)
     const stoneMaterial = new THREE.MeshStandardMaterial({
       color: '#404347',
@@ -1267,7 +1267,7 @@ export default function ThreeDView({
   return (
     <div className="canvas-container">
       {/* 3D Canvas */}
-      <Canvas 
+      <Canvas
         camera={{ position: [-6.5, 5.5, 7.2], fov: 45 }}
         shadows
         gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.70 }}
@@ -1284,14 +1284,14 @@ export default function ThreeDView({
         {/* Ambient vullicht en hemisphere voor uniforme belichting */}
         <ambientLight intensity={0.10} />
         <hemisphereLight skyColor="#ffffff" groundColor="#ebdcb0" intensity={0.02} />
-        
+
         {/* Lichtbron die meebeweegt met de camera (headlight) voor egale belichting van alle kijkhoeken */}
         <CameraLight />
 
         {/* Een zacht, statisch zonlicht voor de schaduwen op de muur en dieptewerking */}
-        <directionalLight 
-          position={[2.5, 8, 2.5]} 
-          intensity={0.15} 
+        <directionalLight
+          position={[2.5, 8, 2.5]}
+          intensity={0.15}
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}
@@ -1326,11 +1326,11 @@ export default function ThreeDView({
         </mesh>
 
         {/* Fijn raster op de vloer voor IKEA-gevoel */}
-        <Grid 
+        <Grid
           position={[-wallDimensions.back / 2, 0.001, wallDimensions.right / 2]}
           args={[wallDimensions.back, wallDimensions.right]}
-          cellSize={0.6} 
-          cellThickness={1.2} 
+          cellSize={0.6}
+          cellThickness={1.2}
           cellColor="#a39f96"
           sectionSize={1.8}
           sectionThickness={0}
@@ -1350,13 +1350,13 @@ export default function ThreeDView({
           >
             Voorbeeldopstelling
             {"\n"}
-            Klik op 'Nieuw Ontwerp' voor uw eigen ontwerp
+            Klik op 'Nieuw Ontwerp' voor je eigen samenstelling; dubbelklik op de fronten voor een vloeiend-open-en dicht-sensatie'
           </Text>
         )}
 
         {/* Render alle kasten */}
         {cabinets.map((cab) => (
-          <Cabinet3D 
+          <Cabinet3D
             key={cab.id}
             cabinet={cab}
             isSelected={cab.id === selectedCabinetId}
@@ -1374,19 +1374,19 @@ export default function ThreeDView({
         {renderOpenings3D()}
 
         {/* Zachte contactschaduwen op de vloer */}
-        <ContactShadows 
+        <ContactShadows
           position={[-wallDimensions.back / 2, 0.01, wallDimensions.right / 2]}
-          opacity={0.45} 
-          scale={5} 
-          blur={1.8} 
+          opacity={0.45}
+          scale={5}
+          blur={1.8}
           far={1.5}
         />
 
         {/* Rondkijken controls */}
-        <OrbitControls 
-          makeDefault 
-          minDistance={1.8} 
-          maxDistance={12} 
+        <OrbitControls
+          makeDefault
+          minDistance={1.8}
+          maxDistance={12}
           maxPolarAngle={Math.PI / 2 - 0.02} // Niet onder de vloer kijken
           target={[-1.2, 0.9, 2.3]} // Richt camera op het aanrecht
         />
