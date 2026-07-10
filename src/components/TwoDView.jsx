@@ -140,89 +140,192 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
 
   // Drawer lines
   const drawerLines = []
-  if (cab.type === 'drawers' || cab.type === 'base_drawer') {
-    const d1 = depthPx * 0.33
-    const d2 = depthPx * 0.66
+  if (cab.isOpen) {
+    const isDouble = cab.width >= 0.8
+    const isDrawer = cab.type === 'drawers' || cab.type === 'base_drawer'
+    const isDoor = ['door', 'sink', 'tall', 'wall', 'wall_extractor'].includes(cab.type)
     const halfW = widthPx / 2
-    drawerLines.push(
-      <line
-        key="d1"
-        x1={cx - halfW * dsx + d1 * wall.normalX}
-        y1={cy - halfW * dsz + d1 * wall.normalZ}
-        x2={cx + halfW * dsx + d1 * wall.normalX}
-        y2={cy + halfW * dsz + d1 * wall.normalZ}
-        stroke="#a6a297"
-        strokeWidth="1"
-        strokeDasharray="2,2"
-      />,
-      <line
-        key="d2"
-        x1={cx - halfW * dsx + d2 * wall.normalX}
-        y1={cy - halfW * dsz + d2 * wall.normalZ}
-        x2={cx + halfW * dsx + d2 * wall.normalX}
-        y2={cy + halfW * dsz + d2 * wall.normalZ}
-        stroke="#a6a297"
-        strokeWidth="1"
-        strokeDasharray="2,2"
-      />
-    )
-  } else if (cab.type === 'open_shelf') {
-    const dShelf = depthPx * 0.5
-    const halfW = widthPx / 2
-    drawerLines.push(
-      <line
-        key="shelf"
-        x1={cx - halfW * dsx + dShelf * wall.normalX}
-        y1={cy - halfW * dsz + dShelf * wall.normalZ}
-        x2={cx + halfW * dsx + dShelf * wall.normalX}
-        y2={cy + halfW * dsz + dShelf * wall.normalZ}
-        stroke="#a6a297"
-        strokeWidth="1.5"
-        strokeDasharray="4,4"
-      />
-    )
 
-    if (cab.code === 'ME104') {
-      const hingeX = cx - halfW * dsx + depthPx * wall.normalX
-      const hingeY = cy - halfW * dsz + depthPx * wall.normalZ
+    if (isDrawer) {
+      const slideDistPx = 25
+      const frontX_start = cx - halfW * dsx + (depthPx + slideDistPx) * wall.normalX
+      const frontY_start = cy - halfW * dsz + (depthPx + slideDistPx) * wall.normalZ
+      const frontX_end = cx + halfW * dsx + (depthPx + slideDistPx) * wall.normalX
+      const frontY_end = cy + halfW * dsz + (depthPx + slideDistPx) * wall.normalZ
 
+      const carcassX_start = cx - halfW * dsx + depthPx * wall.normalX
+      const carcassY_start = cy - halfW * dsz + depthPx * wall.normalZ
+      const carcassX_end = cx + halfW * dsx + depthPx * wall.normalX
+      const carcassY_end = cy + halfW * dsz + depthPx * wall.normalZ
+
+      drawerLines.push(
+        <line
+          key="open_drawer_front"
+          x1={frontX_start}
+          y1={frontY_start}
+          x2={frontX_end}
+          y2={frontY_end}
+          stroke="#2c2b29"
+          strokeWidth="2"
+        />,
+        <line
+          key="drawer_slide_l"
+          x1={carcassX_start}
+          y1={carcassY_start}
+          x2={frontX_start}
+          y2={frontY_start}
+          stroke="#8c887d"
+          strokeWidth="1.5"
+          strokeDasharray="3,3"
+        />,
+        <line
+          key="drawer_slide_r"
+          x1={carcassX_end}
+          y1={carcassY_end}
+          x2={frontX_end}
+          y2={frontY_end}
+          stroke="#8c887d"
+          strokeWidth="1.5"
+          strokeDasharray="3,3"
+        />
+      )
+    } else if (isDoor) {
+      const hingeX_l = cx - halfW * dsx + depthPx * wall.normalX
+      const hingeY_l = cy - halfW * dsz + depthPx * wall.normalZ
       const phi = Math.PI / 4
       const cosPhi = Math.cos(phi)
       const sinPhi = Math.sin(phi)
 
-      const doorEndX = hingeX + widthPx * (cosPhi * dsx + sinPhi * wall.normalX)
-      const doorEndY = hingeY + widthPx * (cosPhi * dsz + sinPhi * wall.normalZ)
+      if (isDouble) {
+        const halfW_px = widthPx / 2
+        const doorEndX_l = hingeX_l + halfW_px * (cosPhi * dsx + sinPhi * wall.normalX)
+        const doorEndY_l = hingeY_l + halfW_px * (cosPhi * dsz + sinPhi * wall.normalZ)
 
+        const hingeX_r = cx + halfW * dsx + depthPx * wall.normalX
+        const hingeY_r = cy + halfW * dsz + depthPx * wall.normalZ
+        const doorEndX_r = hingeX_r + halfW_px * (-cosPhi * dsx + sinPhi * wall.normalX)
+        const doorEndY_r = hingeY_r + halfW_px * (-cosPhi * dsz + sinPhi * wall.normalZ)
+
+        const closedEndX_l = hingeX_l + halfW_px * dsx
+        const closedEndY_l = hingeY_l + halfW_px * dsz
+        const closedEndX_r = hingeX_r - halfW_px * dsx
+        const closedEndY_r = hingeY_r - halfW_px * dsz
+
+        const cross = dsx * wall.normalZ - dsz * wall.normalX
+        const sweepFlag = cross > 0 ? 1 : 0
+        const sweepFlag_r = sweepFlag === 1 ? 0 : 1
+
+        const arcPath_l = `M ${closedEndX_l},${closedEndY_l} A ${halfW_px},${halfW_px} 0 0,${sweepFlag} ${doorEndX_l},${doorEndY_l}`
+        const arcPath_r = `M ${closedEndX_r},${closedEndY_r} A ${halfW_px},${halfW_px} 0 0,${sweepFlag_r} ${doorEndX_r},${doorEndY_r}`
+
+        drawerLines.push(
+          <line key="open_door_l" x1={hingeX_l} y1={hingeY_l} x2={doorEndX_l} y2={doorEndY_l} stroke="#2c2b29" strokeWidth="2" />,
+          <path key="open_door_arc_l" d={arcPath_l} fill="none" stroke="#8c887d" strokeWidth="1.5" strokeDasharray="2,2" />,
+          <line key="open_door_r" x1={hingeX_r} y1={hingeY_r} x2={doorEndX_r} y2={doorEndY_r} stroke="#2c2b29" strokeWidth="2" />,
+          <path key="open_door_arc_r" d={arcPath_r} fill="none" stroke="#8c887d" strokeWidth="1.5" strokeDasharray="2,2" />
+        )
+      } else {
+        const doorEndX = hingeX_l + widthPx * (cosPhi * dsx + sinPhi * wall.normalX)
+        const doorEndY = hingeY_l + widthPx * (cosPhi * dsz + sinPhi * wall.normalZ)
+
+        const closedEndX = hingeX_l + widthPx * dsx
+        const closedEndY = hingeY_l + widthPx * dsz
+
+        const cross = dsx * wall.normalZ - dsz * wall.normalX
+        const sweepFlag = cross > 0 ? 1 : 0
+        const arcPath = `M ${closedEndX},${closedEndY} A ${widthPx},${widthPx} 0 0,${sweepFlag} ${doorEndX},${doorEndY}`
+
+        drawerLines.push(
+          <line key="open_door" x1={hingeX_l} y1={hingeY_l} x2={doorEndX} y2={doorEndY} stroke="#2c2b29" strokeWidth="2" />,
+          <path key="open_door_arc" d={arcPath} fill="none" stroke="#8c887d" strokeWidth="1.5" strokeDasharray="2,2" />
+        )
+      }
+    }
+  } else {
+    if (cab.type === 'drawers' || cab.type === 'base_drawer') {
+      const d1 = depthPx * 0.33
+      const d2 = depthPx * 0.66
+      const halfW = widthPx / 2
       drawerLines.push(
         <line
-          key="open_door"
-          x1={hingeX}
-          y1={hingeY}
-          x2={doorEndX}
-          y2={doorEndY}
-          stroke="#2c2b29"
-          strokeWidth="2"
-        />
-      )
-
-      const closedEndX = hingeX + widthPx * dsx
-      const closedEndY = hingeY + widthPx * dsz
-
-      const cross = dsx * wall.normalZ - dsz * wall.normalX
-      const sweepFlag = cross > 0 ? 1 : 0
-
-      const arcPath = `M ${closedEndX},${closedEndY} A ${widthPx},${widthPx} 0 0,${sweepFlag} ${doorEndX},${doorEndY}`
-
-      drawerLines.push(
-        <path
-          key="open_door_arc"
-          d={arcPath}
-          fill="none"
-          stroke="#8c887d"
-          strokeWidth="1.5"
+          key="d1"
+          x1={cx - halfW * dsx + d1 * wall.normalX}
+          y1={cy - halfW * dsz + d1 * wall.normalZ}
+          x2={cx + halfW * dsx + d1 * wall.normalX}
+          y2={cy + halfW * dsz + d1 * wall.normalZ}
+          stroke="#a6a297"
+          strokeWidth="1"
+          strokeDasharray="2,2"
+        />,
+        <line
+          key="d2"
+          x1={cx - halfW * dsx + d2 * wall.normalX}
+          y1={cy - halfW * dsz + d2 * wall.normalZ}
+          x2={cx + halfW * dsx + d2 * wall.normalX}
+          y2={cy + halfW * dsz + d2 * wall.normalZ}
+          stroke="#a6a297"
+          strokeWidth="1"
           strokeDasharray="2,2"
         />
       )
+    } else if (cab.type === 'open_shelf') {
+      const dShelf = depthPx * 0.5
+      const halfW = widthPx / 2
+      drawerLines.push(
+        <line
+          key="shelf"
+          x1={cx - halfW * dsx + dShelf * wall.normalX}
+          y1={cy - halfW * dsz + dShelf * wall.normalZ}
+          x2={cx + halfW * dsx + dShelf * wall.normalX}
+          y2={cy + halfW * dsz + dShelf * wall.normalZ}
+          stroke="#a6a297"
+          strokeWidth="1.5"
+          strokeDasharray="4,4"
+        />
+      )
+
+      if (cab.code === 'ME104') {
+        const hingeX = cx - halfW * dsx + depthPx * wall.normalX
+        const hingeY = cy - halfW * dsz + depthPx * wall.normalZ
+
+        const phi = Math.PI / 4
+        const cosPhi = Math.cos(phi)
+        const sinPhi = Math.sin(phi)
+
+        const doorEndX = hingeX + widthPx * (cosPhi * dsx + sinPhi * wall.normalX)
+        const doorEndY = hingeY + widthPx * (cosPhi * dsz + sinPhi * wall.normalZ)
+
+        drawerLines.push(
+          <line
+            key="open_door"
+            x1={hingeX}
+            y1={hingeY}
+            x2={doorEndX}
+            y2={doorEndY}
+            stroke="#2c2b29"
+            strokeWidth="2"
+          />
+        )
+
+        const closedEndX = hingeX + widthPx * dsx
+        const closedEndY = hingeY + widthPx * dsz
+
+        const cross = dsx * wall.normalZ - dsz * wall.normalX
+        const sweepFlag = cross > 0 ? 1 : 0
+
+        const arcPath = `M ${closedEndX},${closedEndY} A ${widthPx},${widthPx} 0 0,${sweepFlag} ${doorEndX},${doorEndY}`
+
+        drawerLines.push(
+          <path
+            key="open_door_arc"
+            d={arcPath}
+            fill="none"
+            stroke="#8c887d"
+            strokeWidth="1.5"
+            strokeDasharray="2,2"
+          />
+        )
+      }
     }
   }
 
@@ -231,91 +334,175 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
   const halfW = widthPx / 2
   const handleColor = isSelected ? '#826242' : '#8c887d'
 
-  if (isCorner) {
-    const isLeftCorner = cab.wall !== 'back' || cab.offset <= wall.length / 2
-    const size = cab.width || 0.9
-    const edge = cab.type === 'wall_corner_L' ? 0.35 : 0.6
-    const halfS = size / 2
-    const hx_local = isLeftCorner ? (edge - halfS) : -(edge - halfS)
-    const hz_local = edge - halfS
-    const hwx = wall.x1 + (cab.offset + hx_local) * dsx + (hz_local + halfS) * wall.normalX
-    const hwz = wall.z1 + (cab.offset + hx_local) * dsz + (hz_local + halfS) * wall.normalZ
-    const { sx: hcx, sy: hcy } = toSvg(hwx, hwz)
-
-    handleElements.push(
-      <line
-        key="h1"
-        x1={hcx}
-        y1={hcy}
-        x2={hcx + 6 * wall.normalX}
-        y2={hcy + 6 * wall.normalZ}
-        stroke={handleColor}
-        strokeWidth="1.5"
-      />,
-      <line
-        key="h2"
-        x1={hcx}
-        y1={hcy}
-        x2={hcx - 6 * dsx}
-        y2={hcy - 6 * dsz}
-        stroke={handleColor}
-        strokeWidth="1.5"
-      />
-    )
-  } else if (cab.type === 'drawers' || cab.type === 'base_drawer') {
-    const fc_x = cx + depthPx * wall.normalX
-    const fc_y = cy + depthPx * wall.normalZ
-    handleElements.push(
-      <line
-        key="h-drawer"
-        x1={fc_x - 10 * dsx + 1.5 * wall.normalX}
-        y1={fc_y - 10 * dsz + 1.5 * wall.normalZ}
-        x2={fc_x + 10 * dsx + 1.5 * wall.normalX}
-        y2={fc_y + 10 * dsz + 1.5 * wall.normalZ}
-        stroke={handleColor}
-        strokeWidth="2"
-      />
-    )
-  } else {
+  if (cab.isOpen) {
     const isDouble = cab.width >= 0.8
-    const fc_x = cx + depthPx * wall.normalX
-    const fc_y = cy + depthPx * wall.normalZ
-
-    if (isDouble) {
+    const isDrawer = cab.type === 'drawers' || cab.type === 'base_drawer'
+    
+    if (isDrawer) {
+      const slideDistPx = 25
+      const fc_x = cx + (depthPx + slideDistPx) * wall.normalX
+      const fc_y = cy + (depthPx + slideDistPx) * wall.normalZ
       handleElements.push(
         <line
-          key="h-double-l"
-          x1={fc_x - 3 * dsx}
-          y1={fc_y - 3 * dsz}
-          x2={fc_x - 3 * dsx + 5 * wall.normalX}
-          y2={fc_y - 3 * dsz + 5 * wall.normalZ}
+          key="h-drawer-open"
+          x1={fc_x - 10 * dsx + 1.5 * wall.normalX}
+          y1={fc_y - 10 * dsz + 1.5 * wall.normalZ}
+          x2={fc_x + 10 * dsx + 1.5 * wall.normalX}
+          y2={fc_y + 10 * dsz + 1.5 * wall.normalZ}
+          stroke={handleColor}
+          strokeWidth="2"
+        />
+      )
+    } else if (cab.type !== 'base_dishwasher' && cab.type !== 'open_shelf') {
+      const hingeX_l = cx - halfW * dsx + depthPx * wall.normalX
+      const hingeY_l = cy - halfW * dsz + depthPx * wall.normalZ
+      const phi = Math.PI / 4
+      const cosPhi = Math.cos(phi)
+      const sinPhi = Math.sin(phi)
+      
+      if (isDouble) {
+        const handleDist = (widthPx / 2) * 0.8
+        const handleStartX_l = hingeX_l + handleDist * (cosPhi * dsx + sinPhi * wall.normalX)
+        const handleStartY_l = hingeY_l + handleDist * (cosPhi * dsz + sinPhi * wall.normalZ)
+        const handleDirX_l = -sinPhi * dsx + cosPhi * wall.normalX
+        const handleDirY_l = -sinPhi * dsz + cosPhi * wall.normalZ
+        
+        const hingeX_r = cx + halfW * dsx + depthPx * wall.normalX
+        const hingeY_r = cy + halfW * dsz + depthPx * wall.normalZ
+        const handleStartX_r = hingeX_r + handleDist * (-cosPhi * dsx + sinPhi * wall.normalX)
+        const handleStartY_r = hingeY_r + handleDist * (-cosPhi * dsz + sinPhi * wall.normalZ)
+        const handleDirX_r = sinPhi * dsx + cosPhi * wall.normalX
+        const handleDirY_r = sinPhi * dsz + cosPhi * wall.normalZ
+        
+        handleElements.push(
+          <line
+            key="h-open-door-l"
+            x1={handleStartX_l}
+            y1={handleStartY_l}
+            x2={handleStartX_l + 4 * handleDirX_l}
+            y2={handleStartY_l + 4 * handleDirY_l}
+            stroke={handleColor}
+            strokeWidth="2"
+          />,
+          <line
+            key="h-open-door-r"
+            x1={handleStartX_r}
+            y1={handleStartY_r}
+            x2={handleStartX_r + 4 * handleDirX_r}
+            y2={handleStartY_r + 4 * handleDirY_r}
+            stroke={handleColor}
+            strokeWidth="2"
+          />
+        )
+      } else {
+        const handleDist = widthPx * 0.8
+        const handleStartX = hingeX_l + handleDist * (cosPhi * dsx + sinPhi * wall.normalX)
+        const handleStartY = hingeY_l + handleDist * (cosPhi * dsz + sinPhi * wall.normalZ)
+        const handleDirX = -sinPhi * dsx + cosPhi * wall.normalX
+        const handleDirY = -sinPhi * dsz + cosPhi * wall.normalZ
+        const handleEndX = handleStartX + 4 * handleDirX
+        const handleEndY = handleStartY + 4 * handleDirY
+        
+        handleElements.push(
+          <line
+            key="h-open-door"
+            x1={handleStartX}
+            y1={handleStartY}
+            x2={handleEndX}
+            y2={handleEndY}
+            stroke={handleColor}
+            strokeWidth="2"
+          />
+        )
+      }
+    }
+  } else {
+    if (isCorner) {
+      const isLeftCorner = cab.wall !== 'back' || cab.offset <= wall.length / 2
+      const size = cab.width || 0.9
+      const edge = cab.type === 'wall_corner_L' ? 0.35 : 0.6
+      const halfS = size / 2
+      const hx_local = isLeftCorner ? (edge - halfS) : -(edge - halfS)
+      const hz_local = edge - halfS
+      const hwx = wall.x1 + (cab.offset + hx_local) * dsx + (hz_local + halfS) * wall.normalX
+      const hwz = wall.z1 + (cab.offset + hx_local) * dsz + (hz_local + halfS) * wall.normalZ
+      const { sx: hcx, sy: hcy } = toSvg(hwx, hwz)
+
+      handleElements.push(
+        <line
+          key="h1"
+          x1={hcx}
+          y1={hcy}
+          x2={hcx + 6 * wall.normalX}
+          y2={hcy + 6 * wall.normalZ}
           stroke={handleColor}
           strokeWidth="1.5"
         />,
         <line
-          key="h-double-r"
-          x1={fc_x + 3 * dsx}
-          y1={fc_y + 3 * dsz}
-          x2={fc_x + 3 * dsx + 5 * wall.normalX}
-          y2={fc_y + 3 * dsz + 5 * wall.normalZ}
+          key="h2"
+          x1={hcx}
+          y1={hcy}
+          x2={hcx - 6 * dsx}
+          y2={hcy - 6 * dsz}
           stroke={handleColor}
           strokeWidth="1.5"
         />
       )
-    } else if (cab.type !== 'base_dishwasher' && cab.type !== 'open_shelf') {
-      const hc_x = cx + (halfW - 6) * dsx + depthPx * wall.normalX
-      const hc_y = cy + (halfW - 6) * dsz + depthPx * wall.normalZ
+    } else if (cab.type === 'drawers' || cab.type === 'base_drawer') {
+      const fc_x = cx + depthPx * wall.normalX
+      const fc_y = cy + depthPx * wall.normalZ
       handleElements.push(
         <line
-          key="h-single"
-          x1={hc_x}
-          y1={hc_y}
-          x2={hc_x + 5 * wall.normalX}
-          y2={hc_y + 5 * wall.normalZ}
+          key="h-drawer"
+          x1={fc_x - 10 * dsx + 1.5 * wall.normalX}
+          y1={fc_y - 10 * dsz + 1.5 * wall.normalZ}
+          x2={fc_x + 10 * dsx + 1.5 * wall.normalX}
+          y2={fc_y + 10 * dsz + 1.5 * wall.normalZ}
           stroke={handleColor}
-          strokeWidth="1.5"
+          strokeWidth="2"
         />
       )
+    } else {
+      const isDouble = cab.width >= 0.8
+      const fc_x = cx + depthPx * wall.normalX
+      const fc_y = cy + depthPx * wall.normalZ
+
+      if (isDouble) {
+        handleElements.push(
+          <line
+            key="h-double-l"
+            x1={fc_x - 3 * dsx}
+            y1={fc_y - 3 * dsz}
+            x2={fc_x - 3 * dsx + 5 * wall.normalX}
+            y2={fc_y - 3 * dsz + 5 * wall.normalZ}
+            stroke={handleColor}
+            strokeWidth="1.5"
+          />,
+          <line
+            key="h-double-r"
+            x1={fc_x + 3 * dsx}
+            y1={fc_y + 3 * dsz}
+            x2={fc_x + 3 * dsx + 5 * wall.normalX}
+            y2={fc_y + 3 * dsz + 5 * wall.normalZ}
+            stroke={handleColor}
+            strokeWidth="1.5"
+          />
+        )
+      } else if (cab.type !== 'base_dishwasher' && cab.type !== 'open_shelf') {
+        const hc_x = cx + (halfW - 6) * dsx + depthPx * wall.normalX
+        const hc_y = cy + (halfW - 6) * dsz + depthPx * wall.normalZ
+        handleElements.push(
+          <line
+            key="h-single"
+            x1={hc_x}
+            y1={hc_y}
+            x2={hc_x + 5 * wall.normalX}
+            y2={hc_y + 5 * wall.normalZ}
+            stroke={handleColor}
+            strokeWidth="1.5"
+          />
+        )
+      }
     }
   }
 

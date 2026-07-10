@@ -42,6 +42,7 @@ export default function Sidebar({
   onUpdateCabinetPos,
   floorType,
   onSelectFloorType,
+  onToggleCabinetOpen,
 }) {
   const [activeTab, setActiveTab] = useState('room') // 'room' | 'cabinets'
   const [expandedCategory, setExpandedCategory] = useState('onderkasten') // null | 'onderkasten' | 'bovenkasten' | 'hoge_kasten'
@@ -629,6 +630,41 @@ export default function Sidebar({
                     Afmetingen: {Math.round(selectedCabinet.width * 100)}cm · {Math.round(selectedCabinet.depth * 100)}cm
                   </div>
                 </div>
+
+                {/* Open/Close Animation Toggle */}
+                {selectedCabinet.type !== 'corner_L' && selectedCabinet.type !== 'wall_corner_L' && selectedCabinet.type !== 'open_shelf' && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    borderTop: '1px solid #e5e2db',
+                    paddingTop: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#6c685d' }}>Animatie / Stand</span>
+                      <button
+                        onClick={() => onToggleCabinetOpen(selectedCabinet.id)}
+                        style={{
+                          padding: '5px 12px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          borderRadius: '4px',
+                          border: '1px solid #826242',
+                          background: selectedCabinet.isOpen ? '#826242' : '#ffffff',
+                          color: selectedCabinet.isOpen ? '#ffffff' : '#826242',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        {selectedCabinet.isOpen ? 'Sluiten ✕' : 'Openen ↗'}
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '9px', color: '#8c887d', fontStyle: 'italic', lineHeight: '1.2' }}>
+                      💡 Tip: klik in 3D nogmaals op de geselecteerde kast om deze te openen/sluiten.
+                    </span>
+                  </div>
+                )}
 
                 {/* Offset & Wall Controls */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid #e5e2db', paddingTop: '10px' }}>

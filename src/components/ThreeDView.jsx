@@ -1,4 +1,4 @@
-import { useMemo, Suspense, useEffect, useRef } from 'react'
+import { useMemo, Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Grid, ContactShadows, useGLTF, Environment, Text } from '@react-three/drei'
 import * as THREE from 'three'
@@ -161,13 +161,59 @@ function ReginoxSink({ metalMaterial }) {
 }
 
 // 3D Cabinet Component
-function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial }) {
+function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, metalMaterial }) {
   const { width, height, depth, position, type, code } = cabinet
+
+  // Open/Close smooth animation state
+  const [openProgress, setOpenProgress] = useState(cabinet.isOpen ? 1 : 0)
+
+  useFrame((state, delta) => {
+    const target = cabinet.isOpen ? 1 : 0
+    if (Math.abs(openProgress - target) > 0.001) {
+      const speed = 7 * delta // Smooth transition speed
+      setOpenProgress(prev => {
+        const next = prev + (target - prev) * Math.min(1, speed)
+        return Math.abs(next - target) < 0.001 ? target : next
+      })
+    }
+  })
 
   // Drawer / door front layout per cabinet type
   const renderFronts = () => {
     const gap = 0.004 // 4mm naad tussen lades
     const frontDepth = 0.02 // 2cm dikke fronten
+
+    // Helper om een kistje-achtige ladebak te renderen
+    const renderDrawerBox = (drawerH) => {
+      const boxW = width - 0.06
+      const boxD = 0.45
+      const boxH = drawerH * 0.6 // hoogte van de zijwanden
+      const wallThick = 0.012
+      return (
+        <group position={[0, 0, -frontDepth / 2 - 0.002]}>
+          {/* Bodemplaat */}
+          <mesh position={[0, -drawerH / 2 + wallThick / 2, -boxD / 2]} castShadow receiveShadow>
+            <boxGeometry args={[boxW, wallThick, boxD]} />
+            <meshStandardMaterial color="#c4c1ba" roughness={0.7} />
+          </mesh>
+          {/* Linkerwand */}
+          <mesh position={[-boxW / 2 + wallThick / 2, -drawerH / 2 + boxH / 2 + wallThick, -boxD / 2]} castShadow>
+            <boxGeometry args={[wallThick, boxH, boxD]} />
+            <meshStandardMaterial color="#dedcd5" roughness={0.6} metalness={0.1} />
+          </mesh>
+          {/* Rechterwand */}
+          <mesh position={[boxW / 2 - wallThick / 2, -drawerH / 2 + boxH / 2 + wallThick, -boxD / 2]} castShadow>
+            <boxGeometry args={[wallThick, boxH, boxD]} />
+            <meshStandardMaterial color="#dedcd5" roughness={0.6} metalness={0.1} />
+          </mesh>
+          {/* Achterwand */}
+          <mesh position={[0, -drawerH / 2 + boxH / 2 + wallThick, -boxD + wallThick / 2]} castShadow>
+            <boxGeometry args={[boxW - wallThick * 2, boxH, wallThick]} />
+            <meshStandardMaterial color="#dedcd5" roughness={0.6} metalness={0.1} />
+          </mesh>
+        </group>
+      )
+    }
 
     // Normaliseer catalogus-types naar renderer-types
     const resolvedType =
@@ -207,29 +253,33 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       const upperDoorH = height - lowerDoorH - gap - 0.1 // plinth is 10cm
       const gripLen = width * 0.55
       const carcassHalfH = (height - 0.1) / 2
-      return (
-        <group position={[0, 0, depth / 2 + frontDepth / 2]}>
-          {/* Onderste front */}
-          <mesh position={[0, -carcassHalfH + lowerDoorH / 2, 0]}>
-            <boxGeometry args={[width - gap, lowerDoorH, frontDepth]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
-          {/* Horizontale greep onderdeur */}
-          <mesh position={[0, -carcassHalfH + lowerDoorH - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
-            <primitive object={metalMaterial} attach="material" />
-          </mesh>
+      const openAngle = openProgress * -1.8
 
-          {/* Bovenste front */}
-          <mesh position={[0, -carcassHalfH + lowerDoorH + gap + upperDoorH / 2, 0]}>
-            <boxGeometry args={[width - gap, upperDoorH - gap, frontDepth]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
-          {/* Horizontale greep bovendeur */}
-          <mesh position={[0, -carcassHalfH + lowerDoorH + gap + 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
-            <primitive object={metalMaterial} attach="material" />
-          </mesh>
+      return (
+        <group position={[0, 0, depth / 2]}>
+          {/* Onderste front Hinge Group */}
+          <group position={[-width / 2, -carcassHalfH + lowerDoorH / 2, 0]} rotation={[0, openAngle, 0]}>
+            <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+              <boxGeometry args={[width - gap, lowerDoorH, frontDepth]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+            <mesh position={[width / 2, lowerDoorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
+              <primitive object={metalMaterial} attach="material" />
+            </mesh>
+          </group>
+
+          {/* Bovenste front Hinge Group */}
+          <group position={[-width / 2, -carcassHalfH + lowerDoorH + gap + upperDoorH / 2, 0]} rotation={[0, openAngle, 0]}>
+            <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+              <boxGeometry args={[width - gap, upperDoorH - gap, frontDepth]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+            <mesh position={[width / 2, -upperDoorH / 2 + 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
+              <primitive object={metalMaterial} attach="material" />
+            </mesh>
+          </group>
         </group>
       )
     }
@@ -237,41 +287,51 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
     if (resolvedType === 'wall' || resolvedType === 'wall_extractor') {
       const hasDoubleDoors = width >= 0.8
       const gripLen = (width / (hasDoubleDoors ? 2 : 1)) * 0.5
+      const leftOpenAngle = openProgress * -1.8
+      const rightOpenAngle = openProgress * 1.8
+      const singleOpenAngle = openProgress * -1.8
+
       return (
-        <group position={[0, 0, depth / 2 + frontDepth / 2]}>
+        <group position={[0, 0, depth / 2]}>
           {hasDoubleDoors ? (
             <>
-              <mesh position={[-width / 4, 0, 0]}>
-                <boxGeometry args={[width / 2 - gap, height - gap, frontDepth]} />
-                <primitive object={woodMaterial} attach="material" />
-              </mesh>
-              <mesh position={[width / 4, 0, 0]}>
-                <boxGeometry args={[width / 2 - gap, height - gap, frontDepth]} />
-                <primitive object={woodMaterial} attach="material" />
-              </mesh>
-              {/* Horizontale greepjes bovenkasten (links + rechts) */}
-              <mesh position={[-width / 4, -height / 2 + 0.07, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.006, 0.006, gripLen, 8]} />
-                <primitive object={metalMaterial} attach="material" />
-              </mesh>
-              <mesh position={[width / 4, -height / 2 + 0.07, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.006, 0.006, gripLen, 8]} />
-                <primitive object={metalMaterial} attach="material" />
-              </mesh>
+              {/* Left Door Hinge Group */}
+              <group position={[-width / 2, 0, 0]} rotation={[0, leftOpenAngle, 0]}>
+                <mesh position={[width / 4, 0, frontDepth / 2]} castShadow receiveShadow>
+                  <boxGeometry args={[width / 2 - gap, height - gap, frontDepth]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                <mesh position={[width / 4, -height / 2 + 0.07, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                  <cylinderGeometry args={[0.006, 0.006, gripLen, 8]} />
+                  <primitive object={metalMaterial} attach="material" />
+                </mesh>
+              </group>
+              {/* Right Door Hinge Group */}
+              <group position={[width / 2, 0, 0]} rotation={[0, rightOpenAngle, 0]}>
+                <mesh position={[-width / 4, 0, frontDepth / 2]} castShadow receiveShadow>
+                  <boxGeometry args={[width / 2 - gap, height - gap, frontDepth]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                <mesh position={[-width / 4, -height / 2 + 0.07, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                  <cylinderGeometry args={[0.006, 0.006, gripLen, 8]} />
+                  <primitive object={metalMaterial} attach="material" />
+                </mesh>
+              </group>
             </>
           ) : (
-            <>
-              <mesh>
+            /* Single Door Hinge Group */
+            <group position={[-width / 2, 0, 0]} rotation={[0, singleOpenAngle, 0]}>
+              <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
                 <boxGeometry args={[width - gap, height - gap, frontDepth]} />
                 <primitive object={woodMaterial} attach="material" />
               </mesh>
-              {/* Horizontale greep bovenaan de deur */}
-              <mesh position={[0, -height / 2 + 0.07, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+              <mesh position={[width / 2, -height / 2 + 0.07, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
                 <cylinderGeometry args={[0.006, 0.006, gripLen, 8]} />
                 <primitive object={metalMaterial} attach="material" />
               </mesh>
-            </>
+            </group>
           )}
+
           {/* Afzuigkap kap onderkant indien afzuigkast */}
           {resolvedType === 'wall_extractor' && (
             <mesh position={[0, -height / 2 - 0.02, -depth / 4]} castShadow>
@@ -283,7 +343,7 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       )
     }
 
-    // Hoekonderkast (Corner cabinet)
+    // Hoekonderkast (Corner cabinet) - keeps static
     if (resolvedType === 'corner_L') {
       const isLeftCorner = cabinet.wall === 'back' ? cabinet.offset <= 1.5 : cabinet.wall === 'left'
       const xSign = isLeftCorner ? -1 : 1
@@ -313,7 +373,7 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       )
     }
 
-    // Hoekbovenkast (Corner wall cabinet)
+    // Hoekbovenkast (Corner wall cabinet) - keeps static
     if (resolvedType === 'wall_corner_L') {
       const isLeftCorner = cabinet.wall === 'back' ? cabinet.offset <= 1.5 : cabinet.wall === 'left'
       const xSign = isLeftCorner ? -1 : 1
@@ -344,7 +404,6 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
     }
 
     // Standaard onderkasten (Base units)
-    // De fronten hangen aan de voorkant van de kast body
     const baseHeight = height <= 0.85 ? height : 0.8
     const gripLen = width * 0.55
     const gripR = 0.007
@@ -352,171 +411,198 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
     const lineD = frontDepth + 0.002
 
     if (resolvedType === 'base_drawer') {
-      // 3 lades voor ME201: kleine bovenlade + middellade + grote onderlade
-      const topH    = baseHeight * 0.17  // ~14cm bij 80cm kast
-      const midH    = baseHeight * 0.33  // ~26cm
+      const topH    = baseHeight * 0.17
+      const midH    = baseHeight * 0.33
       const bottomH = baseHeight - topH - midH - gap * 2
 
-      // Y-posities (0 = midden van de kast op floor-level, kast zit van -bH/2 tot +bH/2)
       const topY    = baseHeight / 2 - topH / 2
       const midY    = baseHeight / 2 - topH - gap - midH / 2
       const botY    = -baseHeight / 2 + bottomH / 2
 
-      // Naadlijn Y-posities (horizontale scheidingslijn tussen lades)
       const seam1Y  = baseHeight / 2 - topH - gap / 2
       const seam2Y  = -baseHeight / 2 + bottomH + gap / 2
 
+      const topSlide = openProgress * 0.35
+      const midSlide = openProgress * 0.23
+      const botSlide = openProgress * 0.12
+
       return (
-        <group position={[0, 0, depth / 2 + frontDepth / 2]}>
+        <group>
+          {/* === Bovenkant-lade === */}
+          <group position={[0, topY, depth / 2 + frontDepth / 2 + topSlide]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[width - gap, topH - gap, frontDepth]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+            <mesh position={[0, 0, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[gripR, gripR, gripLen, 8]} />
+              <primitive object={metalMaterial} attach="material" />
+            </mesh>
+            {openProgress > 0.01 && renderDrawerBox(topH)}
+          </group>
 
-          {/* === Bovenkant-lade (besteklade) === */}
-          <mesh position={[0, topY, 0]}>
-            <boxGeometry args={[width - gap, topH - gap, frontDepth]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
-          {/* Greep bovenlade – horizontale balk */}
-          <mesh position={[0, topY, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[gripR, gripR, gripLen, 8]} />
-            <primitive object={metalMaterial} attach="material" />
-          </mesh>
-
-          {/* Naadlijn 1 (scheiding boven/midden) */}
-          <mesh position={[0, seam1Y, 0]}>
+          {/* Naadlijn 1 */}
+          <mesh position={[0, seam1Y, depth / 2 + frontDepth / 2]}>
             <boxGeometry args={[width, lineH, lineD]} />
             <meshStandardMaterial color="#1a1a1a" roughness={0.5} metalness={0.1} />
           </mesh>
 
           {/* === Middelste lade === */}
-          <mesh position={[0, midY, 0]}>
-            <boxGeometry args={[width - gap, midH - gap, frontDepth]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
-          {/* Greep middellade */}
-          <mesh position={[0, midY, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[gripR, gripR, gripLen, 8]} />
-            <primitive object={metalMaterial} attach="material" />
-          </mesh>
+          <group position={[0, midY, depth / 2 + frontDepth / 2 + midSlide]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[width - gap, midH - gap, frontDepth]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+            <mesh position={[0, 0, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[gripR, gripR, gripLen, 8]} />
+              <primitive object={metalMaterial} attach="material" />
+            </mesh>
+            {openProgress > 0.01 && renderDrawerBox(midH)}
+          </group>
 
-          {/* Naadlijn 2 (scheiding midden/onder) */}
-          <mesh position={[0, seam2Y, 0]}>
+          {/* Naadlijn 2 */}
+          <mesh position={[0, seam2Y, depth / 2 + frontDepth / 2]}>
             <boxGeometry args={[width, lineH, lineD]} />
             <meshStandardMaterial color="#1a1a1a" roughness={0.5} metalness={0.1} />
           </mesh>
 
-          {/* === Onderste lade (grootste) === */}
-          <mesh position={[0, botY, 0]}>
-            <boxGeometry args={[width - gap, bottomH - gap, frontDepth]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
-          {/* Greep onderlade */}
-          <mesh position={[0, botY, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-            <cylinderGeometry args={[gripR, gripR, gripLen, 8]} />
-            <primitive object={metalMaterial} attach="material" />
-          </mesh>
-
+          {/* === Onderste lade === */}
+          <group position={[0, botY, depth / 2 + frontDepth / 2 + botSlide]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[width - gap, bottomH - gap, frontDepth]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+            <mesh position={[0, 0, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <cylinderGeometry args={[gripR, gripR, gripLen, 8]} />
+              <primitive object={metalMaterial} attach="material" />
+            </mesh>
+            {openProgress > 0.01 && renderDrawerBox(bottomH)}
+          </group>
         </group>
       )
     }
 
     if (resolvedType === 'base_door' || resolvedType === 'base_sink' || resolvedType === 'base_dishwasher') {
-      // 1 of 2 deuren (draaideur of vaatwasser front)
       const hasDoubleDoors = width >= 0.8
-      const hasDummyDrawer = resolvedType === 'base_sink' // spoelkast heeft vaak een blindpaneel bovenin
+      const hasDummyDrawer = resolvedType === 'base_sink'
       const doorGripLen = (hasDoubleDoors ? width / 2 : width) * 0.55
 
       if (hasDummyDrawer) {
         const dummyH = 0.14
         const doorH = baseHeight - dummyH
-        // Naadlijn tussen blindpaneel en deur
         const seamY = baseHeight / 2 - dummyH - gap / 2
+        
+        const leftOpenAngle = openProgress * -1.8
+        const rightOpenAngle = openProgress * 1.8
+        const singleOpenAngle = openProgress * -1.8
+
         return (
-          <group position={[0, 0, depth / 2 + frontDepth / 2]}>
-            {/* Blindpaneel lade (met kleine horizontale greep) */}
-            <mesh position={[0, baseHeight / 2 - dummyH / 2, 0]}>
+          <group position={[0, 0, depth / 2]}>
+            {/* Blindpaneel lade */}
+            <mesh position={[0, baseHeight / 2 - dummyH / 2, frontDepth / 2]} castShadow receiveShadow>
               <boxGeometry args={[width - gap, dummyH - gap, frontDepth]} />
               <primitive object={woodMaterial} attach="material" />
             </mesh>
             {/* Naadlijn blindpaneel / deur */}
-            <mesh position={[0, seamY, 0]}>
+            <mesh position={[0, seamY, frontDepth / 2]}>
               <boxGeometry args={[width, lineH, lineD]} />
               <meshStandardMaterial color="#1a1a1a" roughness={0.5} metalness={0.1} />
             </mesh>
             {/* Deuren eronder */}
             {hasDoubleDoors ? (
               <>
-                <mesh position={[-width / 4, -baseHeight / 2 + doorH / 2, 0]}>
-                  <boxGeometry args={[width / 2 - gap, doorH - gap, frontDepth]} />
-                  <primitive object={woodMaterial} attach="material" />
-                </mesh>
-                <mesh position={[width / 4, -baseHeight / 2 + doorH / 2, 0]}>
-                  <boxGeometry args={[width / 2 - gap, doorH - gap, frontDepth]} />
-                  <primitive object={woodMaterial} attach="material" />
-                </mesh>
-                {/* Horizontale handgrepen */}
-                <mesh position={[-width / 4, -baseHeight / 2 + doorH - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-                  <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
-                  <primitive object={metalMaterial} attach="material" />
-                </mesh>
-                <mesh position={[width / 4, -baseHeight / 2 + doorH - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-                  <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
-                  <primitive object={metalMaterial} attach="material" />
-                </mesh>
+                {/* Left Door Hinge Group */}
+                <group position={[-width / 2, -baseHeight / 2 + doorH / 2, 0]} rotation={[0, leftOpenAngle, 0]}>
+                  <mesh position={[width / 4, 0, frontDepth / 2]} castShadow receiveShadow>
+                    <boxGeometry args={[width / 2 - gap, doorH - gap, frontDepth]} />
+                    <primitive object={woodMaterial} attach="material" />
+                  </mesh>
+                  <mesh position={[width / 4, doorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                    <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
+                    <primitive object={metalMaterial} attach="material" />
+                  </mesh>
+                </group>
+                {/* Right Door Hinge Group */}
+                <group position={[width / 2, -baseHeight / 2 + doorH / 2, 0]} rotation={[0, rightOpenAngle, 0]}>
+                  <mesh position={[-width / 4, 0, frontDepth / 2]} castShadow receiveShadow>
+                    <boxGeometry args={[width / 2 - gap, doorH - gap, frontDepth]} />
+                    <primitive object={woodMaterial} attach="material" />
+                  </mesh>
+                  <mesh position={[-width / 4, doorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                    <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
+                    <primitive object={metalMaterial} attach="material" />
+                  </mesh>
+                </group>
               </>
             ) : (
-              <>
-                <mesh position={[0, -baseHeight / 2 + doorH / 2, 0]}>
+              /* Single Door Hinge Group */
+              <group position={[-width / 2, -baseHeight / 2 + doorH / 2, 0]} rotation={[0, singleOpenAngle, 0]}>
+                <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
                   <boxGeometry args={[width - gap, doorH - gap, frontDepth]} />
                   <primitive object={woodMaterial} attach="material" />
                 </mesh>
-                {/* Horizontale handgreep */}
-                <mesh position={[0, -baseHeight / 2 + doorH - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+                <mesh position={[width / 2, doorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
                   <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
                   <primitive object={metalMaterial} attach="material" />
                 </mesh>
-              </>
+              </group>
             )}
           </group>
         )
       }
 
       // Standaard draaideur of vaatwasserpaneel
+      const doorW = width - gap
+      const doorH = baseHeight - gap
+      const openAngle = openProgress * -1.8
+
+      if (hasDoubleDoors) {
+        const subDoorW = width / 2 - gap
+        const leftOpenAngle = openProgress * -1.8
+        const rightOpenAngle = openProgress * 1.8
+        return (
+          <group position={[0, 0, depth / 2]}>
+            {/* Left Door Hinge Group */}
+            <group position={[-width / 2, 0, 0]} rotation={[0, leftOpenAngle, 0]}>
+              <mesh position={[width / 4, 0, frontDepth / 2]} castShadow receiveShadow>
+                <boxGeometry args={[subDoorW, doorH, frontDepth]} />
+                <primitive object={woodMaterial} attach="material" />
+              </mesh>
+              <mesh position={[width / 4, doorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
+                <primitive object={metalMaterial} attach="material" />
+              </mesh>
+            </group>
+            {/* Right Door Hinge Group */}
+            <group position={[width / 2, 0, 0]} rotation={[0, rightOpenAngle, 0]}>
+              <mesh position={[-width / 4, 0, frontDepth / 2]} castShadow receiveShadow>
+                <boxGeometry args={[subDoorW, doorH, frontDepth]} />
+                <primitive object={woodMaterial} attach="material" />
+              </mesh>
+              <mesh position={[-width / 4, doorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
+                <primitive object={metalMaterial} attach="material" />
+              </mesh>
+            </group>
+          </group>
+        )
+      }
+
       return (
-        <group position={[0, 0, depth / 2 + frontDepth / 2]}>
-          {hasDoubleDoors ? (
-            <>
-              <mesh position={[-width / 4, 0, 0]}>
-                <boxGeometry args={[width / 2 - gap, baseHeight - gap, frontDepth]} />
-                <primitive object={woodMaterial} attach="material" />
-              </mesh>
-              <mesh position={[width / 4, 0, 0]}>
-                <boxGeometry args={[width / 2 - gap, baseHeight - gap, frontDepth]} />
-                <primitive object={woodMaterial} attach="material" />
-              </mesh>
-              {/* Horizontale greepjes bovenaan dubbele deuren */}
-              <mesh position={[-width / 4, baseHeight / 2 - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
+        <group position={[-width / 2, 0, depth / 2]}>
+          <group rotation={[0, openAngle, 0]}>
+            <mesh position={[doorW / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+              <boxGeometry args={[doorW, doorH, frontDepth]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+            {/* Horizontale greep bovenaan de deur */}
+            {resolvedType !== 'base_dishwasher' && (
+              <mesh position={[doorW / 2, doorH / 2 - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
                 <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
                 <primitive object={metalMaterial} attach="material" />
               </mesh>
-              <mesh position={[width / 4, baseHeight / 2 - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
-                <primitive object={metalMaterial} attach="material" />
-              </mesh>
-            </>
-          ) : (
-            <>
-              <mesh>
-                <boxGeometry args={[width - gap, baseHeight - gap, frontDepth]} />
-                <primitive object={woodMaterial} attach="material" />
-              </mesh>
-              {/* Horizontale greep bovenaan de deur */}
-              {resolvedType !== 'base_dishwasher' && (
-                <mesh position={[0, baseHeight / 2 - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]}>
-                  <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
-                  <primitive object={metalMaterial} attach="material" />
-                </mesh>
-              )}
-            </>
-          )}
+            )}
+          </group>
         </group>
       )
     }
@@ -598,7 +684,11 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
       rotation={groupRotation} 
       onClick={(e) => {
         e.stopPropagation()
-        onSelect(cabinet.id)
+        if (isSelected && onToggleOpen) {
+          onToggleOpen(cabinet.id)
+        } else {
+          onSelect(cabinet.id)
+        }
       }}
     >
       {/* Kast omtrek indicator indien geselecteerd */}
@@ -634,8 +724,8 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
             <primitive object={woodMaterial} attach="material" />
           </mesh>
         </group>
-      ) : type === 'open_shelf' ? (
-        // Open kast met 1 legplank (schap)
+      ) : type === 'open_shelf' || type === 'door' || type === 'drawers' || type === 'wall' || type === 'wall_extractor' ? (
+        // Open kastromp met eventueel een legplank (schap)
         <group>
           {/* Bodem */}
           <mesh position={[0, -height / 2 + 0.009, 0]} castShadow receiveShadow>
@@ -662,11 +752,13 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
             <boxGeometry args={[width - 0.036, height - 0.036, 0.018]} />
             <primitive object={woodMaterial} attach="material" />
           </mesh>
-          {/* Legplank (schap) in het midden */}
-          <mesh position={[0, 0, 0]} castShadow receiveShadow>
-            <boxGeometry args={[width - 0.036, 0.018, depth - 0.036]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
+          {/* Legplank (schap) in het midden (niet voor ladekasten!) */}
+          {type !== 'drawers' && (
+            <mesh position={[0, 0, 0]} castShadow receiveShadow>
+              <boxGeometry args={[width - 0.036, 0.018, depth - 0.036]} />
+              <primitive object={woodMaterial} attach="material" />
+            </mesh>
+          )}
         </group>
       ) : type === 'sink' ? (
         // Spoelkast: U-vorm zonder bovenpaneel zodat de spoelbak erdoorheen kan zakken
@@ -694,11 +786,52 @@ function Cabinet3D({ cabinet, isSelected, onSelect, woodMaterial, metalMaterial 
         </group>
       ) : type === 'tall' ? (
         <group>
-          {/* Carcass */}
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[width, height - 0.1, depth]} />
-            <primitive object={woodMaterial} attach="material" />
-          </mesh>
+          {/* Open carcass voor hoge kast */}
+          {(() => {
+            const carcassH = height - 0.1
+            return (
+              <group>
+                {/* Bodem */}
+                <mesh position={[0, -carcassH / 2 + 0.009, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[width, 0.018, depth]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                {/* Top */}
+                <mesh position={[0, carcassH / 2 - 0.009, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[width, 0.018, depth]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                {/* Linkerzijwand */}
+                <mesh position={[-width / 2 + 0.009, 0, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.018, carcassH - 0.036, depth]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                {/* Rechterzijwand */}
+                <mesh position={[width / 2 - 0.009, 0, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.018, carcassH - 0.036, depth]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                {/* Achterwand */}
+                <mesh position={[0, 0, -depth / 2 + 0.009]} castShadow receiveShadow>
+                  <boxGeometry args={[width - 0.036, carcassH - 0.036, 0.018]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                {/* 3 Legplanken */}
+                <mesh position={[0, -carcassH / 2 + carcassH * 0.25, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[width - 0.036, 0.018, depth - 0.036]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                <mesh position={[0, 0, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[width - 0.036, 0.018, depth - 0.036]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+                <mesh position={[0, carcassH / 2 - carcassH * 0.25, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[width - 0.036, 0.018, depth - 0.036]} />
+                  <primitive object={woodMaterial} attach="material" />
+                </mesh>
+              </group>
+            )
+          })()}
           {/* Plint */}
           <mesh position={[0, -(height - 0.1) / 2 - 0.05, depth / 2 - 0.07 - 0.01]} castShadow receiveShadow>
             <boxGeometry args={[width, 0.1, 0.02]} />
@@ -725,6 +858,7 @@ export default function ThreeDView({
   cabinets,
   selectedCabinetId,
   onSelectCabinet,
+  onToggleCabinetOpen,
   selectedOpeningId,
   onSelectOpening,
   selectedMaterial,
@@ -1227,6 +1361,7 @@ export default function ThreeDView({
             cabinet={cab}
             isSelected={cab.id === selectedCabinetId}
             onSelect={onSelectCabinet}
+            onToggleOpen={onToggleCabinetOpen}
             woodMaterial={materials.woodMaterial}
             metalMaterial={materials.metalMaterial}
           />
