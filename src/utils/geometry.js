@@ -268,3 +268,68 @@ export function getSnappedOffsetWithLength(
 
   return Math.max(cabWidth / 2, Math.min(wallLength - cabWidth / 2, rawOffset))
 }
+
+// Bepaal de slimme automatische draairichting voor een deur op basis van omliggende kasten
+export function getAutomaticHinge(cabinet, allCabinets) {
+  // Alleen van toepassing op modules met een enkele deur
+  const singleDoorTypes = ['door', 'tall', 'wall', 'wall_extractor', 'sink']
+  if (!singleDoorTypes.includes(cabinet.type)) return 'left'
+  
+  // Als de kast breed is (bijv. 80cm of meer), heeft deze meestal dubbele deuren
+  if (cabinet.width >= 0.8) return 'left'
+
+  const wallId = cabinet.wall
+  const sameWallCabinets = allCabinets.filter(c => c.wall === wallId && c.id !== cabinet.id)
+
+  const leftEdge = cabinet.offset - cabinet.width / 2
+  const rightEdge = cabinet.offset + cabinet.width / 2
+
+  let hasLeftNeighbor = false
+  let leftNeighborType = null
+  let hasRightNeighbor = false
+  let rightNeighborType = null
+
+  const tolerance = 0.05 // 5cm tolerantiegrens
+
+  sameWallCabinets.forEach(c => {
+    const cLeft = c.offset - c.width / 2
+    const cRight = c.offset + c.width / 2
+
+    // Linkerbuur raakt de linkerkant van deze kast
+    if (Math.abs(cRight - leftEdge) < tolerance) {
+      hasLeftNeighbor = true
+      leftNeighborType = c.type
+    }
+    // Rechterbuur raakt de rechterkant van deze kast
+    if (Math.abs(cLeft - rightEdge) < tolerance) {
+      hasRightNeighbor = true
+      rightNeighborType = c.type
+    }
+  })
+
+  // 1. Als er alleen een kast links staat (bijv. einde van de rij rechts): opens to the right (hinge right)
+  if (hasLeftNeighbor && !hasRightNeighbor) {
+    return 'right'
+  }
+  // 2. Als er alleen een kast rechts staat (bijv. begin van de rij links): opens to the left (hinge left)
+  if (hasRightNeighbor && !hasLeftNeighbor) {
+    return 'left'
+  }
+  // 3. Als er aan beide kanten kasten staan:
+  if (hasLeftNeighbor && hasRightNeighbor) {
+    const isLeftDrawers = leftNeighborType === 'drawers' || leftNeighborType === 'base_drawer'
+    const isRightDrawers = rightNeighborType === 'drawers' || rightNeighborType === 'base_drawer'
+    
+    // Draai weg van de ladekast als er aan één kant lades zijn
+    if (isLeftDrawers && !isRightDrawers) {
+      return 'right'
+    }
+    if (isRightDrawers && !isLeftDrawers) {
+      return 'left'
+    }
+  }
+
+  // Standaard linksdraaiend
+  return 'left'
+}
+

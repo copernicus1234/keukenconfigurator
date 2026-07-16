@@ -19,11 +19,11 @@ export const KITCHEN_CATALOG = [
   },
   {
     code: 'ME104',
-    name: 'Laag blok 400 1 schap met halfopen deurtje (+ plint 100)',
+    name: 'Onderkast met deurtje (40cm) (+ plint 100)',
     width: 0.4,
     height: 0.8,
     depth: 0.6,
-    type: 'open_shelf',
+    type: 'door',
     price: 139
   },
   {

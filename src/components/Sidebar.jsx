@@ -43,6 +43,7 @@ export default function Sidebar({
   floorType,
   onSelectFloorType,
   onToggleCabinetOpen,
+  onUpdateCabinetHinge,
 }) {
   const [activeTab, setActiveTab] = useState('room') // 'room' | 'cabinets'
   const [expandedCategory, setExpandedCategory] = useState('onderkasten') // null | 'onderkasten' | 'bovenkasten' | 'hoge_kasten'
@@ -663,6 +664,34 @@ export default function Sidebar({
                     <span style={{ fontSize: '9px', color: '#8c887d', fontStyle: 'italic', lineHeight: '1.2' }}>
                       💡 Tip: klik in 3D nogmaals op de geselecteerde kast om deze te openen/sluiten.
                     </span>
+                  </div>
+                )}
+
+                {/* Hinge Side Selector (only for single door units) */}
+                {['door', 'tall', 'wall', 'wall_extractor', 'sink'].includes(selectedCabinet.type) && selectedCabinet.width < 0.8 && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    borderTop: '1px solid #e5e2db',
+                    paddingTop: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#6c685d' }}>Draairichting deur</span>
+                      <select
+                        value={selectedCabinet.hinge || 'auto'}
+                        onChange={e => onUpdateCabinetHinge(selectedCabinet.id, e.target.value)}
+                        style={{
+                          padding: '4px 8px', border: '1px solid #e5e2db', borderRadius: '4px',
+                          fontSize: '12px', background: '#ffffff', color: '#2c2b29',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="auto">Automatisch</option>
+                        <option value="left">Links</option>
+                        <option value="right">Rechts</option>
+                      </select>
+                    </div>
                   </div>
                 )}
 

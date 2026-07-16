@@ -2,7 +2,7 @@ import { useMemo, Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Grid, ContactShadows, useGLTF, Environment, Text } from '@react-three/drei'
 import * as THREE from 'three'
-import { getWalls } from '../utils/geometry'
+import { getWalls, getAutomaticHinge } from '../utils/geometry'
 
 // Een lichtbron die met de camera meebeweegt (headlight)
 function CameraLight() {
@@ -161,8 +161,13 @@ function ReginoxSink({ metalMaterial }) {
 }
 
 // 3D Cabinet Component
-function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, metalMaterial }) {
+function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, metalMaterial, allCabinets }) {
   const { width, height, depth, position, type, code } = cabinet
+
+  // Bepaal de actieve draairichting (gebruikt automatische detectie als deze op 'auto' of leeg staat)
+  const activeHinge = !cabinet.hinge || cabinet.hinge === 'auto'
+    ? getAutomaticHinge(cabinet, allCabinets || [])
+    : cabinet.hinge
 
   // Open/Close smooth animation state
   const [openProgress, setOpenProgress] = useState(cabinet.isOpen ? 1 : 0)
@@ -222,30 +227,6 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
           type === 'sink' ? 'base_sink' :
             type
 
-    if (code === 'ME104') {
-      const baseHeight = height <= 0.85 ? height : 0.8
-      const doorW = width - gap
-      const doorH = baseHeight - gap
-      const gripR = 0.007
-      const doorGripLen = doorW * 0.55
-      const openAngle = -Math.PI / 4 // 45 graden open
-      return (
-        <group position={[-width / 2, 0, depth / 2]}>
-          <group rotation={[0, openAngle, 0]}>
-            {/* Deur front */}
-            <mesh position={[doorW / 2, 0, frontDepth / 2]} castShadow receiveShadow>
-              <boxGeometry args={[doorW, doorH, frontDepth]} />
-              <primitive object={woodMaterial} attach="material" />
-            </mesh>
-            {/* Horizontale handgreep */}
-            <mesh position={[doorW / 2, doorH / 2 - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
-              <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
-              <primitive object={metalMaterial} attach="material" />
-            </mesh>
-          </group>
-        </group>
-      )
-    }
 
     if (resolvedType === 'tall') {
       // Hoge kast: een onderdeur en een bovendeur
@@ -253,29 +234,32 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
       const upperDoorH = height - lowerDoorH - gap - 0.1 // plinth is 10cm
       const gripLen = width * 0.55
       const carcassHalfH = (height - 0.1) / 2
-      const openAngle = openProgress * -1.8
+      const hingeX = activeHinge === 'left' ? -width / 2 : width / 2
+      const doorX = activeHinge === 'left' ? width / 2 : -width / 2
+      const handleX = activeHinge === 'left' ? width - 0.04 : -width + 0.04
+      const openAngle = openProgress * (activeHinge === 'left' ? -1.8 : 1.8)
 
       return (
         <group position={[0, 0, depth / 2]}>
           {/* Onderste front Hinge Group */}
-          <group position={[-width / 2, -carcassHalfH + lowerDoorH / 2, 0]} rotation={[0, openAngle, 0]}>
-            <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+          <group position={[hingeX, -carcassHalfH + lowerDoorH / 2, 0]} rotation={[0, openAngle, 0]}>
+            <mesh position={[doorX, 0, frontDepth / 2]} castShadow receiveShadow>
               <boxGeometry args={[width - gap, lowerDoorH, frontDepth]} />
               <primitive object={woodMaterial} attach="material" />
             </mesh>
-            <mesh position={[width / 2, lowerDoorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <mesh position={[handleX, lowerDoorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
               <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
               <primitive object={metalMaterial} attach="material" />
             </mesh>
           </group>
 
           {/* Bovenste front Hinge Group */}
-          <group position={[-width / 2, -carcassHalfH + lowerDoorH + gap + upperDoorH / 2, 0]} rotation={[0, openAngle, 0]}>
-            <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+          <group position={[hingeX, -carcassHalfH + lowerDoorH + gap + upperDoorH / 2, 0]} rotation={[0, openAngle, 0]}>
+            <mesh position={[doorX, 0, frontDepth / 2]} castShadow receiveShadow>
               <boxGeometry args={[width - gap, upperDoorH - gap, frontDepth]} />
               <primitive object={woodMaterial} attach="material" />
             </mesh>
-            <mesh position={[width / 2, -upperDoorH / 2 + 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <mesh position={[handleX, -upperDoorH / 2 + 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
               <cylinderGeometry args={[0.007, 0.007, gripLen, 8]} />
               <primitive object={metalMaterial} attach="material" />
             </mesh>
@@ -320,12 +304,19 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
             </>
           ) : (
             /* Single Door Hinge Group */
-            <group position={[-width / 2, 0, 0]} rotation={[0, singleOpenAngle, 0]}>
-              <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+            <group
+              position={[activeHinge === 'left' ? -width / 2 : width / 2, 0, 0]}
+              rotation={[0, activeHinge === 'left' ? singleOpenAngle : -singleOpenAngle, 0]}
+            >
+              <mesh position={[activeHinge === 'left' ? width / 2 : -width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
                 <boxGeometry args={[width - gap, height - gap, frontDepth]} />
                 <primitive object={woodMaterial} attach="material" />
               </mesh>
-              <mesh position={[width / 2, -height / 2 + 0.07, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <mesh
+                position={[activeHinge === 'left' ? width - 0.04 : -width + 0.04, -height / 2 + 0.07, frontDepth + 0.012]}
+                rotation={[0, 0, Math.PI / 2]}
+                castShadow
+              >
                 <cylinderGeometry args={[0.006, 0.006, gripLen, 8]} />
                 <primitive object={metalMaterial} attach="material" />
               </mesh>
@@ -536,12 +527,19 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
               </>
             ) : (
               /* Single Door Hinge Group */
-              <group position={[-width / 2, -baseHeight / 2 + doorH / 2, 0]} rotation={[0, singleOpenAngle, 0]}>
-                <mesh position={[width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+              <group
+                position={[activeHinge === 'left' ? -width / 2 : width / 2, -baseHeight / 2 + doorH / 2, 0]}
+                rotation={[0, activeHinge === 'left' ? singleOpenAngle : -singleOpenAngle, 0]}
+              >
+                <mesh position={[activeHinge === 'left' ? width / 2 : -width / 2, 0, frontDepth / 2]} castShadow receiveShadow>
                   <boxGeometry args={[width - gap, doorH - gap, frontDepth]} />
                   <primitive object={woodMaterial} attach="material" />
                 </mesh>
-                <mesh position={[width / 2, doorH / 2 - 0.08, frontDepth + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <mesh
+                  position={[activeHinge === 'left' ? width - 0.04 : -width + 0.04, doorH / 2 - 0.08, frontDepth + 0.012]}
+                  rotation={[0, 0, Math.PI / 2]}
+                  castShadow
+                >
                   <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
                   <primitive object={metalMaterial} attach="material" />
                 </mesh>
@@ -589,15 +587,19 @@ function Cabinet3D({ cabinet, isSelected, onSelect, onToggleOpen, woodMaterial, 
       }
 
       return (
-        <group position={[-width / 2, 0, depth / 2]}>
-          <group rotation={[0, openAngle, 0]}>
-            <mesh position={[doorW / 2, 0, frontDepth / 2]} castShadow receiveShadow>
+        <group position={[activeHinge === 'left' ? -width / 2 : width / 2, 0, depth / 2]}>
+          <group rotation={[0, activeHinge === 'left' ? openAngle : -openAngle, 0]}>
+            <mesh position={[activeHinge === 'left' ? doorW / 2 : -doorW / 2, 0, frontDepth / 2]} castShadow receiveShadow>
               <boxGeometry args={[doorW, doorH, frontDepth]} />
               <primitive object={woodMaterial} attach="material" />
             </mesh>
             {/* Horizontale greep bovenaan de deur */}
             {resolvedType !== 'base_dishwasher' && (
-              <mesh position={[doorW / 2, doorH / 2 - 0.08, frontDepth / 2 + 0.012]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <mesh
+                position={[activeHinge === 'left' ? doorW - 0.04 : -doorW + 0.04, doorH / 2 - 0.08, frontDepth / 2 + 0.012]}
+                rotation={[0, 0, Math.PI / 2]}
+                castShadow
+              >
                 <cylinderGeometry args={[gripR, gripR, doorGripLen, 8]} />
                 <primitive object={metalMaterial} attach="material" />
               </mesh>
@@ -1364,6 +1366,7 @@ export default function ThreeDView({
             onToggleOpen={onToggleCabinetOpen}
             woodMaterial={materials.woodMaterial}
             metalMaterial={materials.metalMaterial}
+            allCabinets={cabinets}
           />
         ))}
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { getWalls, getClosestWallAndOffset, getSnappedOffsetWithLength } from '../utils/geometry'
+import { getWalls, getClosestWallAndOffset, getSnappedOffsetWithLength, getAutomaticHinge } from '../utils/geometry'
 
 const SCALE = 70        // pixels per meter
 const WALL_THICK = 10   // px wall thickness
@@ -51,11 +51,16 @@ function DimLine({ x1, y1, x2, y2, label, offset = 20, vertical = false }) {
 }
 
 // Draw a cabinet rectangle in SVG given wall geometry and offset
-function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCabinet }) {
+function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCabinet, allCabinets }) {
   const isWallCab = cab.type.startsWith('wall')
   const isCorner = cab.type === 'corner_L' || cab.type === 'wall_corner_L'
   const widthPx = cab.width * SCALE
   const depthPx = (isWallCab ? 0.35 : cab.depth) * SCALE
+
+  // Bepaal de actieve draairichting (gebruikt automatische detectie als deze op 'auto' of leeg staat)
+  const activeHinge = !cab.hinge || cab.hinge === 'auto'
+    ? getAutomaticHinge(cab, allCabinets || [])
+    : cab.hinge
 
   // Direction vector of wall in SVG space
   const dsx = (wall.x2 - wall.x1) / wall.length
@@ -225,18 +230,29 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
           <path key="open_door_arc_r" d={arcPath_r} fill="none" stroke="#8c887d" strokeWidth="1.5" strokeDasharray="2,2" />
         )
       } else {
-        const doorEndX = hingeX_l + widthPx * (cosPhi * dsx + sinPhi * wall.normalX)
-        const doorEndY = hingeY_l + widthPx * (cosPhi * dsz + sinPhi * wall.normalZ)
+        const isLeft = activeHinge === 'left'
+        const hingeX = isLeft
+          ? cx - halfW * dsx + depthPx * wall.normalX
+          : cx + halfW * dsx + depthPx * wall.normalX
+        const hingeY = isLeft
+          ? cy - halfW * dsz + depthPx * wall.normalZ
+          : cy + halfW * dsz + depthPx * wall.normalZ
 
-        const closedEndX = hingeX_l + widthPx * dsx
-        const closedEndY = hingeY_l + widthPx * dsz
+        const closedEndX = hingeX + widthPx * (isLeft ? dsx : -dsx)
+        const closedEndY = hingeY + widthPx * (isLeft ? dsz : -dsz)
+
+        const doorEndX = hingeX + widthPx * ((isLeft ? cosPhi : -cosPhi) * dsx + sinPhi * wall.normalX)
+        const doorEndY = hingeY + widthPx * ((isLeft ? cosPhi : -cosPhi) * dsz + sinPhi * wall.normalZ)
 
         const cross = dsx * wall.normalZ - dsz * wall.normalX
-        const sweepFlag = cross > 0 ? 1 : 0
+        let sweepFlag = cross > 0 ? 1 : 0
+        if (!isLeft) {
+          sweepFlag = sweepFlag === 1 ? 0 : 1
+        }
         const arcPath = `M ${closedEndX},${closedEndY} A ${widthPx},${widthPx} 0 0,${sweepFlag} ${doorEndX},${doorEndY}`
 
         drawerLines.push(
-          <line key="open_door" x1={hingeX_l} y1={hingeY_l} x2={doorEndX} y2={doorEndY} stroke="#2c2b29" strokeWidth="2" />,
+          <line key="open_door" x1={hingeX} y1={hingeY} x2={doorEndX} y2={doorEndY} stroke="#2c2b29" strokeWidth="2" />,
           <path key="open_door_arc" d={arcPath} fill="none" stroke="#8c887d" strokeWidth="1.5" strokeDasharray="2,2" />
         )
       }
@@ -284,48 +300,7 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
         />
       )
 
-      if (cab.code === 'ME104') {
-        const hingeX = cx - halfW * dsx + depthPx * wall.normalX
-        const hingeY = cy - halfW * dsz + depthPx * wall.normalZ
 
-        const phi = Math.PI / 4
-        const cosPhi = Math.cos(phi)
-        const sinPhi = Math.sin(phi)
-
-        const doorEndX = hingeX + widthPx * (cosPhi * dsx + sinPhi * wall.normalX)
-        const doorEndY = hingeY + widthPx * (cosPhi * dsz + sinPhi * wall.normalZ)
-
-        drawerLines.push(
-          <line
-            key="open_door"
-            x1={hingeX}
-            y1={hingeY}
-            x2={doorEndX}
-            y2={doorEndY}
-            stroke="#2c2b29"
-            strokeWidth="2"
-          />
-        )
-
-        const closedEndX = hingeX + widthPx * dsx
-        const closedEndY = hingeY + widthPx * dsz
-
-        const cross = dsx * wall.normalZ - dsz * wall.normalX
-        const sweepFlag = cross > 0 ? 1 : 0
-
-        const arcPath = `M ${closedEndX},${closedEndY} A ${widthPx},${widthPx} 0 0,${sweepFlag} ${doorEndX},${doorEndY}`
-
-        drawerLines.push(
-          <path
-            key="open_door_arc"
-            d={arcPath}
-            fill="none"
-            stroke="#8c887d"
-            strokeWidth="1.5"
-            strokeDasharray="2,2"
-          />
-        )
-      }
     }
   }
 
@@ -395,11 +370,20 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
           />
         )
       } else {
+        const isLeft = activeHinge === 'left'
+        const hingeX = isLeft
+          ? cx - halfW * dsx + depthPx * wall.normalX
+          : cx + halfW * dsx + depthPx * wall.normalX
+        const hingeY = isLeft
+          ? cy - halfW * dsz + depthPx * wall.normalZ
+          : cy + halfW * dsz + depthPx * wall.normalZ
+
         const handleDist = widthPx * 0.8
-        const handleStartX = hingeX_l + handleDist * (cosPhi * dsx + sinPhi * wall.normalX)
-        const handleStartY = hingeY_l + handleDist * (cosPhi * dsz + sinPhi * wall.normalZ)
-        const handleDirX = -sinPhi * dsx + cosPhi * wall.normalX
-        const handleDirY = -sinPhi * dsz + cosPhi * wall.normalZ
+        const handleStartX = hingeX + handleDist * ((isLeft ? cosPhi : -cosPhi) * dsx + sinPhi * wall.normalX)
+        const handleStartY = hingeY + handleDist * ((isLeft ? cosPhi : -cosPhi) * dsz + sinPhi * wall.normalZ)
+        
+        const handleDirX = (isLeft ? -sinPhi : sinPhi) * dsx + cosPhi * wall.normalX
+        const handleDirY = (isLeft ? -sinPhi : sinPhi) * dsz + cosPhi * wall.normalZ
         const handleEndX = handleStartX + 4 * handleDirX
         const handleEndY = handleStartY + 4 * handleDirY
         
@@ -489,8 +473,10 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
           />
         )
       } else if (cab.type !== 'base_dishwasher' && cab.type !== 'open_shelf') {
-        const hc_x = cx + (halfW - 6) * dsx + depthPx * wall.normalX
-        const hc_y = cy + (halfW - 6) * dsz + depthPx * wall.normalZ
+        const isLeft = activeHinge === 'left'
+        const handleShift = isLeft ? (halfW - 6) : (-halfW + 6)
+        const hc_x = cx + handleShift * dsx + depthPx * wall.normalX
+        const hc_y = cy + handleShift * dsz + depthPx * wall.normalZ
         handleElements.push(
           <line
             key="h-single"
@@ -506,36 +492,6 @@ function CabinetRect({ cab, wall, isSelected, onSelect, onDeleteCabinet, onAddCa
     }
   }
 
-  if (cab.code === 'ME104') {
-    const halfW = widthPx / 2
-    const hingeX = cx - halfW * dsx + depthPx * wall.normalX
-    const hingeY = cy - halfW * dsz + depthPx * wall.normalZ
-    const phi = Math.PI / 4
-    const cosPhi = Math.cos(phi)
-    const sinPhi = Math.sin(phi)
-
-    const handleDist = widthPx * 0.8
-    const handleStartX = hingeX + handleDist * (cosPhi * dsx + sinPhi * wall.normalX)
-    const handleStartY = hingeY + handleDist * (cosPhi * dsz + sinPhi * wall.normalZ)
-
-    const handleDirX = -sinPhi * dsx + cosPhi * wall.normalX
-    const handleDirY = -sinPhi * dsz + cosPhi * wall.normalZ
-
-    const handleEndX = handleStartX + 4 * handleDirX
-    const handleEndY = handleStartY + 4 * handleDirY
-
-    handleElements.push(
-      <line
-        key="h-open-door"
-        x1={handleStartX}
-        y1={handleStartY}
-        x2={handleEndX}
-        y2={handleEndY}
-        stroke={handleColor}
-        strokeWidth="2"
-      />
-    )
-  }
 
   return (
     <g onClick={() => onSelect(cab.id)} style={{ cursor: 'pointer' }}>
@@ -923,6 +879,7 @@ export default function TwoDView({
                   onSelect={onSelectCabinet}
                   onDeleteCabinet={onDeleteCabinet}
                   onAddCabinet={onAddCabinet}
+                  allCabinets={cabinets}
                 />
               </g>
             )
